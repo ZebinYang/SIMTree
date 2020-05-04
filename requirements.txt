@@ -1,0 +1,9 @@
+### Dependencies        
+### To install, run:    
+### $ pip install -r requirements.txt   
+
+numpy>=1.15.2
+sklearn
+matplotlib>=2.2.2
+
+git+https://github.com/ZebinYang/pysim.git
