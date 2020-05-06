@@ -29,11 +29,12 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant",
-                 n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+                 split_features=None, n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
 
         self.max_depth = max_depth
         self.base_method = base_method
         self.split_method = split_method
+        self.split_features = split_features
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
         
@@ -152,7 +153,9 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
         self.x, self.y = self._validate_input(x, y)
         n_samples, n_features = self.x.shape
         sample_indice = np.arange(n_samples)
-
+        if self.split_features is None:
+            self.split_features = np.arange(n_features).tolist()
+        
         np.random.seed(self.random_state)
         root_impurity = self.build_root()
         root_node = {"sample_indice": sample_indice,
@@ -432,7 +435,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
         best_threshold = None
         best_left_indice = None
         best_right_indice = None
-        for feature_indice in range(n_features):
+        for feature_indice in self.split_features:
 
             current_feature = node_x[:, feature_indice]
             sortted_indice = np.argsort(current_feature)
@@ -491,7 +494,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        for feature_indice in range(n_features):
+        for feature_indice in self.split_features:
 
             current_feature = node_x[:, feature_indice]
             sortted_indice = np.argsort(current_feature)
@@ -558,7 +561,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        for feature_indice in range(n_features):
+        for feature_indice in self.split_features:
 
             current_feature = node_x[:, feature_indice]
             sortted_indice = np.argsort(current_feature)
@@ -716,7 +719,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        for feature_indice in range(n_features):
+        for feature_indice in self.split_features:
 
             current_feature = node_x[:, feature_indice]
             sortted_indice = np.argsort(current_feature)
@@ -784,7 +787,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        for feature_indice in range(n_features):
+        for feature_indice in self.split_features:
 
             current_feature = node_x[:, feature_indice]
             sortted_indice = np.argsort(current_feature)
@@ -856,7 +859,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        for feature_indice in range(n_features):
+        for feature_indice in self.split_features:
 
             current_feature = node_x[:, feature_indice]
             sortted_indice = np.argsort(current_feature)
