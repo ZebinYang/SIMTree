@@ -70,7 +70,7 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
                          self.split_method)
         
         if self.split_features is not None:
-            if not isinstance(self.split_features, list)
+            if not isinstance(self.split_features, list):
                 raise ValueError("split_features must be an list or None, got %s." % 
                          self.split_features)
                 
