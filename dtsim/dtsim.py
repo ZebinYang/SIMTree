@@ -62,18 +62,23 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
                 raise ValueError("degree must be >= 0, got" % self.max_depth)
    
         if self.base_method not in ["sim", "glm", "constant"]:
-            raise ValueError("method must be an element of [sim, glm, constant], got %s." % 
+            raise ValueError("base_method must be an element of [sim, glm, constant], got %s." % 
                          self.base_method)
 
         if self.split_method not in ["sim", "glm", "constant"]:
-            raise ValueError("method must be an element of [sim, glm, constant], got %s." % 
+            raise ValueError("base_method must be an element of [sim, glm, constant], got %s." % 
                          self.split_method)
         
+        if self.split_features is not None:
+            if not isinstance(self.split_features, list)
+                raise ValueError("split_features must be an list or None, got %s." % 
+                         self.split_features)
+                
         if not isinstance(self.min_samples_leaf, int):
-            raise ValueError("degree must be an integer, got %s." % self.min_samples_leaf)
+            raise ValueError("min_samples_leaf must be an integer, got %s." % self.min_samples_leaf)
 
             if self.min_samples_leaf < 0:
-                raise ValueError("degree must be >= 0, got" % self.min_samples_leaf)
+                raise ValueError("min_samples_leaf must be >= 0, got" % self.min_samples_leaf)
 
         if self.min_impurity_decrease < 0.:
             raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
@@ -357,15 +362,16 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
 
 class DTSimRegressor(BaseDTSim, ClassifierMixin):
     
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant", n_split_grid=10,
-             degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant",
+                 split_features=None, n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
 
         super(DTSimRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  base_method=base_method,
-                                 n_split_grid=n_split_grid,
                                  split_method=split_method,
+                                 split_features=split_features,
+                                 n_split_grid=n_split_grid,
                                  degree=degree,
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
@@ -624,15 +630,16 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
     
 class DTSimClassifier(BaseDTSim, ClassifierMixin):
     
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant", n_split_grid=10,
-                 degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant",
+                 split_features=None, n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
 
         super(DTSimClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  base_method=base_method,
-                                 n_split_grid=n_split_grid,
                                  split_method=split_method,
+                                 split_features=split_features,
+                                 n_split_grid=n_split_grid,
                                  degree=degree,
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
