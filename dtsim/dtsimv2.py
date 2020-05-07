@@ -38,43 +38,35 @@ simplefilter("ignore", category=ConvergenceWarning)
 EPSILON = 1e-7
 
 
-def _first_order(x, y, sample_weight=None, proj_mat=None):
+def first_order(x, y):
 
-    self.mu = np.average(x, axis=0, weights=sample_weight) 
-    self.cov = np.cov(x.T, aweights=sample_weight)
-    self.inv_cov = np.linalg.pinv(self.cov)
-    s1 = np.dot(self.inv_cov, (x - self.mu).T).T
-    zbar = np.average(y.reshape(-1, 1) * s1, axis=0, weights=sample_weight)
+    reg_lambda = 0.0
+    mu = np.average(x, axis=0) 
+    cov = np.cov(x.T)
+    inv_cov = np.linalg.pinv(cov)
+    s1 = np.dot(inv_cov, (x - mu).T).T
+    zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
     sigmat = np.dot(zbar.reshape([-1, 1]), zbar.reshape([-1, 1]).T)
-    if proj_mat is not None:
-        sigmat = np.dot(np.dot(proj_mat, sigmat), proj_mat)
-    u, s, v = np.linalg.svd(sigmat)
-    sigmat = np.dot(np.dot(u, np.diag(s)), u.T)
 
     reg_lambda_max = np.max(np.abs(sigmat) - np.abs(sigmat) * np.eye(sigmat.shape[0]), axis=0).max()
-    spca_solver = fps.fps(sigmat, 1, 1, -1, -1, ro.r.c(self.reg_lambda * reg_lambda_max))
-    beta = np.array(fps.coef_fps(spca_solver, self.reg_lambda * reg_lambda_max))
+    spca_solver = fps.fps(sigmat, 1, 1, -1, -1, ro.r.c(reg_lambda * reg_lambda_max))
+    beta = np.array(fps.coef_fps(spca_solver, reg_lambda * reg_lambda_max))
     return beta
 
-def _second_order(x, y, sample_weight=None, proj_mat=None):
+def second_order(x, y):
 
     n_samples, n_features = x.shape
-    self.mu = np.average(x, axis=0, weights=sample_weight) 
-    self.cov = np.cov(x.T, aweights=sample_weight)
-    self.inv_cov = np.linalg.pinv(self.cov)
-    s1 = np.dot(self.inv_cov, (x - self.mu).T).T
-    sigmat = np.tensordot(s1 * y.reshape([-1, 1]) * sample_weight.reshape([-1, 1]), s1, axes=([0], [0]))
-    sigmat -= np.average(y, axis=0, weights=sample_weight) * self.inv_cov
-    if proj_mat is not None:
-        sigmat = np.dot(np.dot(proj_mat, sigmat), proj_mat)
-    u, s, v = np.linalg.svd(sigmat)
-    sigmat = np.dot(np.dot(u, np.diag(s)), u.T)
+    mu = np.average(x, axis=0) 
+    cov = np.cov(x.T)
+    inv_cov = np.linalg.pinv(cov)
+    s1 = np.dot(inv_cov, (x - self.mu).T).T
+    sigmat = np.tensordot(s1 * y.reshape([-1, 1]), s1, axes=([0], [0]))
+    sigmat -= np.average(y, axis=0) * inv_cov
 
     reg_lambda_max = np.max(np.abs(sigmat) - np.abs(sigmat) * np.eye(sigmat.shape[0]), axis=0).max()
-    spca_solver = fps.fps(sigmat, 1, 1, -1, -1, ro.r.c(self.reg_lambda * reg_lambda_max))
-    beta = np.array(fps.coef_fps(spca_solver, self.reg_lambda * reg_lambda_max))
+    spca_solver = fps.fps(sigmat, 1, 1, -1, -1, ro.r.c(reg_lambda * reg_lambda_max))
+    beta = np.array(fps.coef_fps(spca_solver, reg_lambda * reg_lambda_max))
     return beta
-
 
 
 class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
@@ -84,12 +76,11 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant",
-                 split_features=None, n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+                 n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
 
         self.max_depth = max_depth
         self.base_method = base_method
         self.split_method = split_method
-        self.split_features = split_features
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
         
@@ -268,7 +259,7 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
             node = self.tree[1]
             while not node['is_leaf']:
                 path.append(node["node_id"] - 1)
-                if row[node['feature']] < node['threshold']:
+                if np.dot(row, node['feature']) < node['threshold']:
                     node = self.tree[node['left_child_id']]
                 else:
                     node = self.tree[node['right_child_id']]
@@ -284,7 +275,7 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
         for row in x:
             node = self.tree[1]
             while not node['is_leaf']:
-                if row[node['feature']] < node['threshold']:
+                if np.dot(row, node['feature']) < node['threshold']:
                     node = self.tree[node['left_child_id']]
                 else:
                     node = self.tree[node['right_child_id']]
@@ -297,118 +288,6 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
             pred[sample_indice] = self.tree[node_id]['predict_func'](x[sample_indice, :]).ravel()
         return pred
                 
-    def plot_tree(self, folder="./results/", name="demo", save_png=False, save_eps=False):
-
-        draw_tree = copy.deepcopy(self.tree)
-        pending_node_list = [draw_tree[1]]
-        max_depth = np.max([item["depth"] for key, item in self.tree.items()])
-        while len(pending_node_list) > 0:
-
-            item = pending_node_list.pop()
-            if item["parent_id"] is None:
-                xy = (0.5, 0)
-                parent_xy = None
-            else:
-                parent_xy = draw_tree[item["parent_id"]]["xy"]
-                if item["is_left"]:
-                    xy = (parent_xy[0] - 1 / 2 ** (item["depth"] + 1), 3 * item["depth"] / (3 * max_depth + 2))
-                else:
-                    xy = (parent_xy[0] + 1 / 2 ** (item["depth"] + 1), 3 * item["depth"] / (3 * max_depth + 2))
-
-            if item["is_leaf"]:
-                draw_tree[item["node_id"]].update({"xy": xy, 
-                                      "parent_xy": parent_xy,
-                                      "estimator":item["estimator"],
-                                      "label": "impurity = " + str(np.round(item["impurity"], 3)) 
-                                             + "\nsamples = " + str(int(item["n_samples"]))
-                                             + "\nvalue = " + str(np.round(item["value"], 3))})
-            else:
-                draw_tree[item["node_id"]].update({"xy": xy,
-                                       "parent_xy": parent_xy,
-                                       "label": "X[" + str(item["feature"]) + "] <=" + str(np.round(item["threshold"], 3)) 
-                                            + "\nimpurity = " + str(np.round(item["impurity"], 3)) 
-                                            + "\nsamples = " + str(int(item["n_samples"])) 
-                                            + "\nvalue = " + str(np.round(item["value"], 3))})
-                pending_node_list.append(self.tree[item["left_child_id"]])
-                pending_node_list.append(self.tree[item["right_child_id"]])
-
-
-        fig = plt.figure(figsize=(2 ** (max_depth + 1), max_depth * 2))
-        tree = fig.add_axes([0.0, 0.0, 1, 1])
-        ax_width = tree.get_window_extent().width
-        ax_height = tree.get_window_extent().height
-
-        color_list = [229, 129, 57]
-        values = np.array([item["value"] for key, item in self.tree.items()])
-        min_value, max_value = values.min(), values.max()
-
-        for key, item in draw_tree.items():
-
-            alpha = (item["value"] - min_value) / (max_value - min_value)
-            color = [int(round(alpha * c + (1 - alpha) * 255, 0)) for c in color_list]
-            kwargs = dict(bbox={"fc": '#%2x%2x%2x' % tuple(color), "boxstyle": "round"}, arrowprops={"arrowstyle":"<-"}, 
-                          ha='center', va='center', zorder=100 - 10 * item["depth"], xycoords='axes pixels', fontsize=14)
-
-            if item["parent_id"] is None:
-                tree.annotate(item["label"], (item["xy"][0] * ax_width, (1 - item["xy"][1]) * ax_height), **kwargs)
-            else:
-                if item["is_left"]:
-                    tree.annotate(item["label"], ((item["parent_xy"][0] - 0.01 / 2 ** (item["depth"] + 1)) * ax_width,
-                                         (1 - item["parent_xy"][1] - 0.1 / max_depth) * ax_height),
-                                        (item["xy"][0] * ax_width, (1 - item["xy"][1]) * ax_height), **kwargs)
-                else:
-                    tree.annotate(item["label"], ((item["parent_xy"][0] + 0.01 / 2 ** (item["depth"] + 1)) * ax_width,
-                                         (1 - item["parent_xy"][1] - 0.1 / max_depth) * ax_height),
-                                        (item["xy"][0] * ax_width, (1 - item["xy"][1]) * ax_height), **kwargs)
-
-            if item["is_leaf"] and (self.base_method == "sim"):
-                sim = item["estimator"]
-                
-                if sim is None:
-                    leaf_constant = fig.add_axes([item["xy"][0] - 0.45 / (2 ** max_depth),
-                                       1 - 3 * max_depth / (3 * max_depth + 2) - 1 / max_depth,
-                                       0.85 / (2 ** max_depth), 0.6 / max_depth])
-                    leaf_constant.axhline(item["value"])
-                    leaf_constant.set_ylim(item["value"] - 0.5, item["value"] + 0.5)
-                    leaf_constant.axes.get_xaxis().set_ticks([])
-                    leaf_constant.axes.get_yaxis().set_ticks([])
-                else:
-                    leaf_ridge = fig.add_axes([item["xy"][0] - 0.45 / (2 ** max_depth),
-                                       1 - 3 * max_depth / (3 * max_depth + 2) - 1 / max_depth,
-                                       0.85 / (2 ** max_depth), 0.6 / max_depth])
-                    xgrid = np.linspace(sim.shape_fit_.xmin, sim.shape_fit_.xmax, 100).reshape([-1, 1])
-                    ygrid = sim.shape_fit_.decision_function(xgrid)
-                    leaf_ridge.plot(xgrid, ygrid)
-                    leaf_ridge.axes.get_xaxis().set_ticks([])
-                    leaf_ridge.axes.get_yaxis().set_ticks([])
-
-                    betas = np.hstack([item["estimator"].beta_ for key, item in draw_tree.items() 
-                                       if item["is_leaf"] and (item["estimator"] is not None)])
-                    xlim_min = - max(np.abs(betas.min() - 0.1), np.abs(betas.max() + 0.1))
-                    xlim_max = max(np.abs(betas.min() - 0.1), np.abs(betas.max() + 0.1))
-
-                    leaf_proj = fig.add_axes([item["xy"][0] - 0.45 / (2 ** max_depth),
-                                      1 - 3 * max_depth / (3 * max_depth + 2) - 1.5 / max_depth,
-                                     0.85 / (2 ** max_depth), 0.4 / max_depth])
-                    leaf_proj.bar(np.arange(len(sim.beta_)), sim.beta_.ravel())
-                    leaf_proj.bar(np.arange(len(sim.beta_)), sim.beta_.ravel())
-                    leaf_proj.set_xticks(np.arange(len(sim.beta_)))
-                    leaf_proj.set_xticklabels(["X" + str(idx + 1) for idx in range(len(sim.beta_.ravel()))])
-                    leaf_proj.set_ylim(xlim_min, xlim_max)
-                    leaf_proj.axes.get_yaxis().set_ticks([])
-        tree.set_axis_off()
-        plt.show()
-        if max_depth > 0:
-            save_path = folder + name
-            if save_eps:
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-                fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
-            if save_png:
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-                fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
-
 
 class DTSimRegressor(BaseDTSim, ClassifierMixin):
     
@@ -434,19 +313,9 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
     
     def build_root(self):
         
-        if self.split_method == "constant":
-            root_impurity = self.y.var()
-        elif self.split_method == "sim":
-            root_clf = SimRegressor(method='first_order_thres', degree=self.degree, reg_lambda=0, reg_gamma=0,
+        if self.split_method == "sim":
+            root_clf = SimRegressor(method='first_order', degree=self.degree, reg_lambda=0, reg_gamma=0,
                                      knot_num=self.knot_num, random_state=self.random_state)
-            root_clf.fit(self.x, self.y)
-            root_impurity = mean_squared_error(self.y, root_clf.predict(self.x))
-
-            u = root_clf.beta_
-            proj_mat = np.eye(u.shape[0]) - self.ortho_shrink * np.dot(u, u.T)
-
-        elif self.split_method == "glm":
-            root_clf = LinearRegression()
             root_clf.fit(self.x, self.y)
             root_impurity = mean_squared_error(self.y, root_clf.predict(self.x))
 
@@ -456,9 +325,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
         
         estimator = None
         n_samples = len(sample_indice)
-        if self.base_method == "constant":
-            predict_func = lambda x: np.mean(self.y[sample_indice])
-        elif self.base_method == "sim":
+        if self.base_method == "sim":
             best_impurity = np.inf
             for reg_lambda in self.reg_lambda_list:
                 for reg_gamma in self.reg_gamma_list:
@@ -471,16 +338,6 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
                         best_estimator = estimator
                         best_impurity = current_impurity
             predict_func = lambda x: best_estimator.predict(x)
-        elif self.base_method == "glm":
-            best_impurity = np.inf
-            for alpha in (0.1, 1.0, 10.0):
-                estimator = Ridge(alpha=alpha)
-                estimator.fit(self.x[sample_indice], self.y[sample_indice])
-                current_impurity = mean_squared_error(self.y[sample_indice], estimator.predict(self.x[sample_indice]))
-                if current_impurity < best_impurity:
-                    best_estimator = estimator
-                    best_impurity = current_impurity
-            predict_func = lambda x: best_estimator.predict(x)
         return predict_func, estimator
     
     def node_split_sim(self, sample_indice):
@@ -489,7 +346,6 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
         node_y = self.y[sample_indice]
         n_samples, n_features = node_x.shape
 
-        best_feature = None
         best_position = None
         best_threshold = None
         best_left_indice = None
@@ -497,59 +353,57 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        for feature_indice in self.split_features:
+        
+        beta = first_order(node_x, node_y)
+        current_feature = np.dot(node_x, beta[:, 1])
+        sortted_indice = np.argsort(current_feature)
+        sortted_feature = current_feature[sortted_indice]
+        feature_range = sortted_feature[-1] - sortted_feature[0]
 
-            current_feature = node_x[:, feature_indice]
-            sortted_indice = np.argsort(current_feature)
-            sortted_feature = current_feature[sortted_indice]
-            feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
+        split_point = 0
+        for i, _ in enumerate(sortted_indice):
+
+            if i == (n_samples - 1):
                 continue
 
-            split_point = 0
-            for i, _ in enumerate(sortted_indice):
+            if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                continue
 
-                if i == (n_samples - 1):
-                    continue
+            if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                continue
 
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
-                    continue
-                
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
-                    continue
+            if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
+                continue
 
-                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
-                    continue
+            split_point += 1
+            left_indice = sortted_indice[:(i + 1)]
+            estimator = SimRegressor(method='first_order', degree=self.degree,
+                             reg_lambda=0, reg_gamma=0,
+                             knot_num=self.knot_num, random_state=self.random_state)
+            estimator.fit(node_x[left_indice], node_y[left_indice])
+            left_impurity = mean_squared_error(node_y[left_indice], estimator.predict(node_x[left_indice]))
 
-                split_point += 1
-                left_indice = sortted_indice[:(i + 1)]
-                estimator = SimRegressor(method='first_order_thres', degree=self.degree,
-                                 reg_lambda=0, reg_gamma=0,
-                                 knot_num=self.knot_num, random_state=self.random_state)
-                estimator.fit(node_x[left_indice], node_y[left_indice])
-                left_impurity = mean_squared_error(node_y[left_indice], estimator.predict(node_x[left_indice]))
+            right_indice = sortted_indice[(i + 1):]
+            estimator = SimRegressor(method='first_order', degree=self.degree,
+                             reg_lambda=0, reg_gamma=0,
+                             knot_num=self.knot_num, random_state=self.random_state)
+            estimator.fit(node_x[right_indice], node_y[right_indice])
+            right_impurity = mean_squared_error(node_y[right_indice], estimator.predict(node_x[right_indice]))
 
-                right_indice = sortted_indice[(i + 1):]
-                estimator = SimRegressor(method='first_order_thres', degree=self.degree,
-                                 reg_lambda=0, reg_gamma=0,
-                                 knot_num=self.knot_num, random_state=self.random_state)
-                estimator.fit(node_x[right_indice], node_y[right_indice])
-                right_impurity = mean_squared_error(node_y[right_indice], estimator.predict(node_x[right_indice]))
-
-                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
-                if current_impurity < best_impurity:
-                    best_position = i + 1
-                    best_feature = feature_indice
-                    best_impurity = current_impurity
-                    best_left_impurity = left_impurity
-                    best_right_impurity = right_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+            current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+            if current_impurity < best_impurity:
+                best_position = i + 1
+                best_feature = feature_indice
+                best_impurity = current_impurity
+                best_left_impurity = left_impurity
+                best_right_impurity = right_impurity
+                best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
 
         if best_position is not None:
             sortted_indice = np.argsort(node_x[:, best_feature])
             best_left_indice = sample_indice[sortted_indice[:best_position]]
             best_right_indice = sample_indice[sortted_indice[best_position:]]
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
+        node = {"feature":beta[:, 1], "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
               "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
         return node
     
