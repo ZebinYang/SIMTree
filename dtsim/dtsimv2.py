@@ -187,9 +187,7 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
         self.x, self.y = self._validate_input(x, y)
         n_samples, n_features = self.x.shape
         sample_indice = np.arange(n_samples)
-        if self.split_features is None:
-            self.split_features = np.arange(n_features).tolist()
-        
+
         np.random.seed(self.random_state)
         root_impurity = self.build_root()
         root_node = {"sample_indice": sample_indice,
@@ -277,12 +275,12 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
         return pred
                 
 
-class DTSimRegressor(BaseDTSim, ClassifierMixin):
+class DTSimRegressorV2(BaseDTSim, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant", n_split_grid=10,
              degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
 
-        super(DTSimRegressor, self).__init__(max_depth=max_depth,
+        super(DTSimRegressorV2, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  base_method=base_method,
