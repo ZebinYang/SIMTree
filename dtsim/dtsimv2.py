@@ -49,7 +49,7 @@ def first_order(x, y):
     sigmat = np.dot(zbar.reshape([-1, 1]), zbar.reshape([-1, 1]).T)
 
     reg_lambda_max = np.max(np.abs(sigmat) - np.abs(sigmat) * np.eye(sigmat.shape[0]), axis=0).max()
-    spca_solver = fps.fps(sigmat, 1, 1, -1, -1, ro.r.c(reg_lambda * reg_lambda_max))
+    spca_solver = fps.fps(sigmat, 2, 1, -1, -1, ro.r.c(reg_lambda * reg_lambda_max))
     beta = np.array(fps.coef_fps(spca_solver, reg_lambda * reg_lambda_max))
     return beta
 
@@ -64,7 +64,7 @@ def second_order(x, y):
     sigmat -= np.average(y, axis=0) * inv_cov
 
     reg_lambda_max = np.max(np.abs(sigmat) - np.abs(sigmat) * np.eye(sigmat.shape[0]), axis=0).max()
-    spca_solver = fps.fps(sigmat, 1, 1, -1, -1, ro.r.c(reg_lambda * reg_lambda_max))
+    spca_solver = fps.fps(sigmat, 2, 1, -1, -1, ro.r.c(reg_lambda * reg_lambda_max))
     beta = np.array(fps.coef_fps(spca_solver, reg_lambda * reg_lambda_max))
     return beta
 
