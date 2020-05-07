@@ -92,12 +92,8 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
 
         self.random_state = random_state
 
-        if self.split_method == "constant":
-            self.node_split = self.node_split_constant
-        elif self.split_method == "sim":
+        if self.split_method == "sim":
             self.node_split = self.node_split_sim
-        elif self.split_method == "glm":
-            self.node_split = self.node_split_glm
 
     def _validate_hyperparameters(self):
 
@@ -155,14 +151,6 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
             if self.reg_gamma < 0:
                 raise ValueError("all the elements in reg_gamma must be >= 0, got %s." % self.reg_gamma)
             self.reg_gamma_list = [self.reg_gamma]
-
-    @abstractmethod
-    def node_split_constant(self):
-        pass
-
-    @abstractmethod
-    def node_split_glm(self):
-        pass
 
     @abstractmethod
     def node_split_sim(self):
