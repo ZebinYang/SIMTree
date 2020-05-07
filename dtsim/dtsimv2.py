@@ -394,3 +394,142 @@ class DTSimRegressorV2(BaseDTSim, ClassifierMixin):
         
     def predict(self, x):
         return self.decision_function(x)
+
+    
+class DTSimClassifierV2(BaseDTSim, ClassifierMixin):
+    
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant",
+                 split_features=None, n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+
+        super(DTSimClassifierV2, self).__init__(max_depth=max_depth,
+                                 min_samples_leaf=min_samples_leaf,
+                                 min_impurity_decrease=min_impurity_decrease,
+                                 base_method=base_method,
+                                 split_method=split_method,
+                                 split_features=split_features,
+                                 n_split_grid=n_split_grid,
+                                 degree=degree,
+                                 knot_num=knot_num,
+                                 reg_lambda=reg_lambda,
+                                 reg_gamma=reg_gamma,
+                                 random_state=random_state)
+
+    def _validate_input(self, x, y):
+        x, y = check_X_y(x, y, accept_sparse=["csr", "csc", "coo"],
+                         multi_output=True)
+        if y.ndim == 2 and y.shape[1] == 1:
+            y = column_or_1d(y, warn=False)
+
+        self._label_binarizer = LabelBinarizer()
+        self._label_binarizer.fit(y)
+        self.classes_ = self._label_binarizer.classes_
+
+        y = self._label_binarizer.transform(y) * 1.0
+        return x, y.ravel()
+    
+    def build_root(self):
+        
+        if self.split_method == "sim":
+            root_clf = SimClassifier(method='first_order', degree=self.degree, reg_lambda=0, reg_gamma=0,
+                                     knot_num=self.knot_num, random_state=self.random_state)
+            root_clf.fit(self.x, self.y)
+            root_impurity = log_loss(self.y, root_clf.predict_proba(self.x))
+        return root_impurity
+
+    def build_leaf(self, sample_indice):
+        
+        estimator = None
+        n_samples = len(sample_indice)
+        if self.base_method == "sim":
+            if self.y[sample_indice].std() == 0:
+                predict_func = lambda x: np.mean(self.y[sample_indice])
+            else:
+                best_impurity = np.inf
+                for reg_lambda in self.reg_lambda_list:
+                    for reg_gamma in self.reg_gamma_list:
+                        estimator = SimClassifier(method='first_order', degree=self.degree,
+                                 reg_lambda=reg_lambda, reg_gamma=reg_gamma,
+                                 knot_num=self.knot_num, random_state=self.random_state)
+                        estimator.fit(self.x[sample_indice], self.y[sample_indice])
+                        current_impurity = log_loss(self.y[sample_indice], estimator.predict_proba(self.x[sample_indice]))
+                        if current_impurity < best_impurity:
+                            best_estimator = estimator
+                            best_impurity = current_impurity
+                predict_func = lambda x: best_estimator.predict_proba(x)
+        return predict_func, estimator
+
+    def node_split_sim(self, sample_indice):
+        
+        node_x = self.x[sample_indice]
+        node_y = self.y[sample_indice]
+        n_samples, n_features = node_x.shape
+
+        best_position = None
+        best_threshold = None
+        best_left_indice = None
+        best_right_indice = None
+        best_impurity = np.inf
+        best_left_impurity = np.inf
+        best_right_impurity = np.inf
+        
+        beta = first_order(node_x, node_y)
+        current_feature = np.dot(node_x, beta[:, 1])
+        sortted_indice = np.argsort(current_feature)
+        sortted_feature = current_feature[sortted_indice]
+        feature_range = sortted_feature[-1] - sortted_feature[0]
+
+        split_point = 0
+        for i, _ in enumerate(sortted_indice):
+
+            if i == (n_samples - 1):
+                continue
+
+            if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                continue
+
+            if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                continue
+
+            if (i - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
+                continue
+
+            split_point += 1
+            left_indice = sortted_indice[:(i + 1)]
+            if node_y[left_indice].std() == 0:
+                left_impurity = 0
+            else:
+                left_clf = SimClassifier(method='first_order', degree=self.degree, reg_lambda=0, reg_gamma=0,
+                                 knot_num=self.knot_num, random_state=self.random_state)
+                left_clf.fit(node_x[left_indice], node_y[left_indice])
+                left_impurity = log_loss(node_y[left_indice], left_clf.predict_proba(node_x[left_indice]))
+
+            right_indice = sortted_indice[(i + 1):]
+            if node_y[right_indice].std() == 0:
+                right_impurity = 0
+            else:
+                right_clf = SimClassifier(method='first_order', degree=self.degree, reg_lambda=0, reg_gamma=0,
+                                  knot_num=self.knot_num, random_state=self.random_state)
+                right_clf.fit(node_x[right_indice], node_y[right_indice])
+                right_impurity = log_loss(node_y[right_indice], right_clf.predict_proba(node_x[right_indice]))
+            current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+
+            if current_impurity < best_impurity:
+                best_position = i + 1
+                best_impurity = current_impurity
+                best_left_impurity = left_impurity
+                best_right_impurity = right_impurity
+                best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+
+        if best_position is not None:
+            best_left_indice = sample_indice[sortted_indice[:best_position]]
+            best_right_indice = sample_indice[sortted_indice[best_position:]]
+        node = {"feature":beta[:, 1], "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
+              "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
+        return node
+    
+    def predict_proba(self, x):
+        return self.decision_function(x)
+    
+    def predict(self, x):
+        pred_proba = self.predict_proba(x)
+        return self._label_binarizer.inverse_transform(pred_proba)
