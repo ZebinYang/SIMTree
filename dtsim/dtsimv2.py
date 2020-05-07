@@ -379,14 +379,12 @@ class DTSimRegressorV2(BaseDTSim, ClassifierMixin):
             current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
             if current_impurity < best_impurity:
                 best_position = i + 1
-                best_feature = feature_indice
                 best_impurity = current_impurity
                 best_left_impurity = left_impurity
                 best_right_impurity = right_impurity
                 best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
 
         if best_position is not None:
-            sortted_indice = np.argsort(node_x[:, best_feature])
             best_left_indice = sample_indice[sortted_indice[:best_position]]
             best_right_indice = sample_indice[sortted_indice[best_position:]]
         node = {"feature":beta[:, 1], "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
