@@ -340,10 +340,17 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
                     leaf_proj = fig.add_axes([item["xy"][0] - 0.45 / (2 ** max_depth),
                                       1 - 3 * max_depth / (3 * max_depth + 2) - 1.5 / max_depth,
                                      0.85 / (2 ** max_depth), 0.4 / max_depth])
+                    leaf_proj.bar(np.arange(0, len(sim.beta_),), sim.beta_.ravel())
                     leaf_proj.bar(np.arange(len(sim.beta_)), sim.beta_.ravel())
-                    leaf_proj.bar(np.arange(len(sim.beta_)), sim.beta_.ravel())
-                    leaf_proj.set_xticks(np.arange(len(sim.beta_)))
-                    leaf_proj.set_xticklabels(["X" + str(idx + 1) for idx in range(len(sim.beta_.ravel()))])
+
+                    if len(len(sim.beta_)) > 10:
+                        input_ticks = np.linspace(0.1 * len(sim.beta_), len(sim.beta_) * 0.9, 4).astype(int)
+                        input_labels = ["X" + str(idx + 1) for idx in input_ticks][::-1]
+                    else:
+                        input_ticks = np.arange(len(sim.beta_))
+                        input_labels = ["X" + str(idx + 1) for idx in input_ticks][::-1]
+                    leaf_proj.set_xticks(input_ticks)
+                    leaf_proj.set_xticklabels(input_labels)
                     leaf_proj.set_ylim(xlim_min, xlim_max)
                     leaf_proj.axes.get_yaxis().set_ticks([])
         tree.set_axis_off()
