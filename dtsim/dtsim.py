@@ -343,7 +343,7 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
                     leaf_proj.bar(np.arange(0, len(sim.beta_),), sim.beta_.ravel())
                     leaf_proj.bar(np.arange(len(sim.beta_)), sim.beta_.ravel())
 
-                    if len(len(sim.beta_)) > 10:
+                    if len(sim.beta_) > 10:
                         input_ticks = np.linspace(0.1 * len(sim.beta_), len(sim.beta_) * 0.9, 4).astype(int)
                         input_labels = ["X" + str(idx + 1) for idx in input_ticks][::-1]
                     else:
