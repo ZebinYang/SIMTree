@@ -399,14 +399,13 @@ class DTSimRegressorV2(BaseDTSim, ClassifierMixin):
 class DTSimClassifierV2(BaseDTSim, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant",
-                 split_features=None, n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+                 n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
 
         super(DTSimClassifierV2, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  base_method=base_method,
                                  split_method=split_method,
-                                 split_features=split_features,
                                  n_split_grid=n_split_grid,
                                  degree=degree,
                                  knot_num=knot_num,
