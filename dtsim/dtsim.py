@@ -28,21 +28,22 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
      """
 
     @abstractmethod
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant",
-                 split_features=None, n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
+                 split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
+                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, random_state=0):
 
         self.max_depth = max_depth
         self.base_method = base_method
         self.split_method = split_method
+        self.n_split_grid = n_split_grid
         self.split_features = split_features
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
         
+        self.spline = spline
         self.degree = degree
         self.knot_num = knot_num
         self.reg_lambda = reg_lambda
-        self.reg_gamma = reg_gamma
-        self.n_split_grid = n_split_grid
 
         self.random_state = random_state
 
@@ -83,6 +84,10 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
         if self.min_impurity_decrease < 0.:
             raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
 
+        if self.spline not in ["smoothing_spline", "pspline", "mono_pspline"]:
+            raise ValueError("base_method must be an element of [smoothing_spline, pspline, mono_pspline], got %s." % 
+                         self.base_method)
+            
         if not isinstance(self.degree, int):
             raise ValueError("degree must be an integer, got %s." % self.degree)
 
@@ -105,28 +110,6 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
                 raise ValueError("reg_lambda must be >= 0 and <=1, got %s." % self.reg_lambda)
             self.reg_lambda_list = [self.reg_lambda]
 
-        if isinstance(self.reg_gamma, list):
-            for val in self.reg_gamma:
-                if val < 0:
-                    raise ValueError("all the elements in reg_gamma must be >= 0, got %s." % self.reg_gamma)
-            self.reg_gamma_list = self.reg_gamma  
-        elif (isinstance(self.reg_gamma, float)) or (isinstance(self.reg_gamma, int)):
-            if self.reg_gamma < 0:
-                raise ValueError("all the elements in reg_gamma must be >= 0, got %s." % self.reg_gamma)
-            self.reg_gamma_list = [self.reg_gamma]
-
-    @abstractmethod
-    def node_split_constant(self):
-        pass
-
-    @abstractmethod
-    def node_split_glm(self):
-        pass
-
-    @abstractmethod
-    def node_split_sim(self):
-        pass
-    
     def add_node(self, parent_id, is_left, is_leaf, depth, feature, threshold, impurity, sample_indice):
 
         self.node_count += 1
@@ -369,16 +352,18 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
 
 class DTSimRegressor(BaseDTSim, ClassifierMixin):
     
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant",
-                 split_features=None, n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
+                 split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
+                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
 
         super(DTSimRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  base_method=base_method,
                                  split_method=split_method,
-                                 split_features=split_features,
                                  n_split_grid=n_split_grid,
+                                 split_features=split_features,
+                                 spline=spline,
                                  degree=degree,
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
@@ -395,7 +380,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
         if self.split_method == "constant":
             root_impurity = self.y.var()
         elif self.split_method == "sim":
-            root_clf = SimRegressor(method='first_order_thres', degree=self.degree, reg_lambda=0, reg_gamma=0,
+            root_clf = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree, reg_lambda=0, reg_gamma=0,
                                      knot_num=self.knot_num, random_state=self.random_state)
             root_clf.fit(self.x, self.y)
             root_impurity = mean_squared_error(self.y, root_clf.predict(self.x))
@@ -637,16 +622,18 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
     
 class DTSimClassifier(BaseDTSim, ClassifierMixin):
     
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, split_method="constant", base_method="constant",
-                 split_features=None, n_split_grid=10, degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
+                 split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
+                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, random_state=0):
 
         super(DTSimClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  base_method=base_method,
                                  split_method=split_method,
-                                 split_features=split_features,
                                  n_split_grid=n_split_grid,
+                                 split_features=split_features,
+                                 spline=spline,
                                  degree=degree,
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
