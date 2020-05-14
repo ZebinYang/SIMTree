@@ -30,7 +30,7 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, random_state=0):
+                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
         self.max_depth = max_depth
         self.base_method = base_method
@@ -44,7 +44,8 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
         self.degree = degree
         self.knot_num = knot_num
         self.reg_lambda = reg_lambda
-
+        self.reg_gamma = reg_gamma
+        
         self.random_state = random_state
 
         if self.split_method == "constant":
@@ -84,9 +85,9 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
         if self.min_impurity_decrease < 0.:
             raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
 
-        if self.spline not in ["smoothing_spline", "pspline", "mono_pspline"]:
-            raise ValueError("base_method must be an element of [smoothing_spline, pspline, mono_pspline], got %s." % 
-                         self.base_method)
+        if self.spline not in ["smoothing_spline", "p_spline", "mono_p_spline", "a_spline"]:
+            raise ValueError("base_method must be an element of [smoothing_spline, p_spline, mono_p_spline, a_spline], got %s." % 
+                         self.spline)
             
         if not isinstance(self.degree, int):
             raise ValueError("degree must be an integer, got %s." % self.degree)
@@ -109,6 +110,16 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
             if (self.reg_lambda < 0) or (self.reg_lambda > 1):
                 raise ValueError("reg_lambda must be >= 0 and <=1, got %s." % self.reg_lambda)
             self.reg_lambda_list = [self.reg_lambda]
+
+        if isinstance(self.reg_gamma, list):
+            for val in self.reg_gamma:
+                if val < 0:
+                    raise ValueError("all the elements in reg_gamma must be >= 0, got %s." % self.reg_gamma)
+            self.reg_gamma_list = self.reg_gamma  
+        elif (isinstance(self.reg_lambda, float)) or (isinstance(self.reg_gamma, int)):
+            if (self.reg_gamma < 0) or (self.reg_gamma > 1):
+                raise ValueError("reg_gamma must be >= 0 and <=1, got %s." % self.reg_gamma)
+            self.reg_gamma_list = [self.reg_gamma]
 
     def add_node(self, parent_id, is_left, is_leaf, depth, feature, threshold, impurity, sample_indice):
 
@@ -354,7 +365,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=10, random_state=0):
+                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
         super(DTSimRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -624,7 +635,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, random_state=0):
+                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
         super(DTSimClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
