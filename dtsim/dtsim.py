@@ -412,7 +412,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
             best_impurity = np.inf
             for reg_lambda in self.reg_lambda_list:
                 for reg_gamma in self.reg_gamma_list:
-                    estimator = SimRegressor(method='first_order_thres', degree=self.degree,
+                    estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
                              reg_lambda=reg_lambda, reg_gamma=reg_gamma,
                              knot_num=self.knot_num, random_state=self.random_state)
                     estimator.fit(self.x[sample_indice], self.y[sample_indice])
@@ -596,14 +596,14 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
-                estimator = SimRegressor(method='first_order_thres', degree=self.degree,
+                estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
                                  reg_lambda=0, reg_gamma=0,
                                  knot_num=self.knot_num, random_state=self.random_state)
                 estimator.fit(node_x[left_indice], node_y[left_indice])
                 left_impurity = mean_squared_error(node_y[left_indice], estimator.predict(node_x[left_indice]))
 
                 right_indice = sortted_indice[(i + 1):]
-                estimator = SimRegressor(method='first_order_thres', degree=self.degree,
+                estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
                                  reg_lambda=0, reg_gamma=0,
                                  knot_num=self.knot_num, random_state=self.random_state)
                 estimator.fit(node_x[right_indice], node_y[right_indice])
@@ -670,7 +670,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
             p = self.y.mean()
             root_impurity = - p * np.log2(p) - (1 - p) * np.log2((1 - p)) if (p > 0) and (p < 1) else 0 
         elif self.split_method == "sim":
-            root_clf = SimClassifier(method='first_order_thres', degree=self.degree, reg_lambda=0, reg_gamma=0,
+            root_clf = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree, reg_lambda=0, reg_gamma=0,
                                      knot_num=self.knot_num, random_state=self.random_state)
             root_clf.fit(self.x, self.y)
             root_impurity = log_loss(self.y, root_clf.predict_proba(self.x))
@@ -693,7 +693,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                 best_impurity = np.inf
                 for reg_lambda in self.reg_lambda_list:
                     for reg_gamma in self.reg_gamma_list:
-                        estimator = SimClassifier(method='first_order_thres', degree=self.degree,
+                        estimator = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
                                  reg_lambda=reg_lambda, reg_gamma=reg_gamma,
                                  knot_num=self.knot_num, random_state=self.random_state)
                         estimator.fit(self.x[sample_indice], self.y[sample_indice])
@@ -900,7 +900,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                 if node_y[left_indice].std() == 0:
                     left_impurity = 0
                 else:
-                    left_clf = SimClassifier(method='first_order_thres', degree=self.degree, reg_lambda=0, reg_gamma=0,
+                    left_clf = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree, reg_lambda=0, reg_gamma=0,
                                      knot_num=self.knot_num, random_state=self.random_state)
                     left_clf.fit(node_x[left_indice], node_y[left_indice])
                     left_impurity = log_loss(node_y[left_indice], left_clf.predict_proba(node_x[left_indice]))
@@ -909,7 +909,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                 if node_y[right_indice].std() == 0:
                     right_impurity = 0
                 else:
-                    right_clf = SimClassifier(method='first_order_thres', degree=self.degree, reg_lambda=0, reg_gamma=0,
+                    right_clf = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree, reg_lambda=0, reg_gamma=0,
                                       knot_num=self.knot_num, random_state=self.random_state)
                     right_clf.fit(node_x[right_indice], node_y[right_indice])
                     right_impurity = log_loss(node_y[right_indice], right_clf.predict_proba(node_x[right_indice]))
