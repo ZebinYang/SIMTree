@@ -116,7 +116,7 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
                 if val < 0:
                     raise ValueError("all the elements in reg_gamma must be >= 0, got %s." % self.reg_gamma)
             self.reg_gamma_list = self.reg_gamma  
-        elif (isinstance(self.reg_lambda, float)) or (isinstance(self.reg_gamma, int)):
+        elif (isinstance(self.reg_gamma, float)) or (isinstance(self.reg_gamma, int)):
             if (self.reg_gamma < 0) or (self.reg_gamma > 1):
                 raise ValueError("reg_gamma must be >= 0 and <=1, got %s." % self.reg_gamma)
             self.reg_gamma_list = [self.reg_gamma]
