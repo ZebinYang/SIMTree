@@ -425,7 +425,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
                              reg_lambda=reg_lambda, reg_gamma=reg_gamma,
                              knot_num=self.knot_num, random_state=self.random_state)
                     estimator.fit(self.x[sample_indice], self.y[sample_indice])
-                    if inner_update:
+                    if self.inner_update:
                         estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
                                           method="adam", n_inner_iter_no_change=1,
                                           batch_size=min(100, int(0.2 * n_samples)), verbose=False)
