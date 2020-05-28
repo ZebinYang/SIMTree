@@ -425,14 +425,14 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
                              reg_lambda=reg_lambda, reg_gamma=reg_gamma,
                              knot_num=self.knot_num, random_state=self.random_state)
                     estimator.fit(self.x[sample_indice], self.y[sample_indice])
-                    if self.inner_update:
-                        estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
-                                          method="adam", n_inner_iter_no_change=1,
-                                          batch_size=min(100, int(0.2 * n_samples)), verbose=False)
                     current_impurity = mean_squared_error(self.y[sample_indice], estimator.predict(self.x[sample_indice]))
                     if current_impurity < best_impurity:
                         best_estimator = estimator
                         best_impurity = current_impurity
+            if self.inner_update:
+                best_estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
+                                  method="adam", n_inner_iter_no_change=1,
+                                  batch_size=min(100, int(0.2 * n_samples)), verbose=False)
             predict_func = lambda x: best_estimator.predict(x)
         elif self.base_method == "glm":
             best_impurity = np.inf
@@ -712,14 +712,14 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                                  reg_lambda=reg_lambda, reg_gamma=reg_gamma,
                                  knot_num=self.knot_num, random_state=self.random_state)
                         estimator.fit(self.x[sample_indice], self.y[sample_indice])
-                        if self.inner_update:
-                            estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
-                                              method="adam", n_inner_iter_no_change=1,
-                                              batch_size=min(100, int(0.2 * n_samples)), verbose=False)
                         current_impurity = log_loss(self.y[sample_indice], estimator.predict_proba(self.x[sample_indice]))
                         if current_impurity < best_impurity:
                             best_estimator = estimator
                             best_impurity = current_impurity
+                if self.inner_update:
+                    best_estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
+                                          method="adam", n_inner_iter_no_change=1,
+                                          batch_size=min(100, int(0.2 * n_samples)), verbose=False)
                 predict_func = lambda x: best_estimator.predict_proba(x)
         elif self.base_method == "glm":
             if self.y[sample_indice].std() == 0:
