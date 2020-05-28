@@ -431,7 +431,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
                         best_impurity = current_impurity
             if self.inner_update:
                 best_estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
-                                  method="adam", n_inner_iter_no_change=1,
+                                  method="adam", max_inner_iter=10, n_inner_iter_no_change=1,
                                   batch_size=min(100, int(0.2 * n_samples)), verbose=False)
             predict_func = lambda x: best_estimator.predict(x)
         elif self.base_method == "glm":
@@ -718,7 +718,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                             best_impurity = current_impurity
                 if self.inner_update:
                     best_estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
-                                          method="adam", n_inner_iter_no_change=1,
+                                          method="adam", max_inner_iter=10, n_inner_iter_no_change=1,
                                           batch_size=min(100, int(0.2 * n_samples)), verbose=False)
                 predict_func = lambda x: best_estimator.predict_proba(x)
         elif self.base_method == "glm":
