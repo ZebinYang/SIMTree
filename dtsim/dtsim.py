@@ -412,7 +412,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
 
     def build_leaf(self, sample_indice):
         
-        estimator = None
+        best_estimator = None
         n_samples = len(sample_indice)
         if self.base_method == "constant":
             predict_func = lambda x: np.mean(self.y[sample_indice])
@@ -444,7 +444,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
                     best_estimator = estimator
                     best_impurity = current_impurity
             predict_func = lambda x: best_estimator.predict(x)
-        return predict_func, estimator, best_impurity
+        return predict_func, best_estimator, best_impurity
     
     def node_split_constant(self, sample_indice):
         
@@ -695,7 +695,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
 
     def build_leaf(self, sample_indice):
         
-        estimator = None
+        best_estimator = None
         n_samples = len(sample_indice)
         if self.base_method == "constant":
             predict_func = lambda x: np.mean(self.y[sample_indice])
@@ -735,7 +735,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                         best_estimator = estimator
                         best_impurity = current_impurity
                 predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
-        return predict_func, estimator, best_impurity
+        return predict_func, best_estimator, best_impurity
     
     def node_split_constant(self, sample_indice):
         
