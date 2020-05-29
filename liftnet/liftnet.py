@@ -430,12 +430,12 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                     estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
                              reg_lambda=reg_lambda, reg_gamma=reg_gamma,
                              knot_num=self.knot_num, random_state=self.random_state)
-                    estimator.fit(self.x[sample_indice[idx1]], self.y[sample_indice[idx1]])
+                    estimator.fit(self.x[idx1], self.y[idx1])
                     if self.inner_update is not None:
                         estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
                                   method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
                                   batch_size=min(100, int(0.2 * n_samples)), verbose=False)
-                    current_impurity = mean_squared_error(self.y[sample_indice[idx2]], estimator.predict(self.x[sample_indice[idx2]]))
+                    current_impurity = mean_squared_error(self.y[idx2], estimator.predict(self.x[idx2]))
                     if current_impurity < best_impurity:
                         best_estimator = estimator
                         best_impurity = current_impurity
@@ -723,12 +723,12 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                         estimator = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
                                  reg_lambda=reg_lambda, reg_gamma=reg_gamma, knot_dist=self.knot_dist, knot_num=self.knot_num,
                                  random_state=self.random_state)
-                        estimator.fit(self.x[sample_indice[idx1]], self.y[sample_indice[idx1]])
+                        estimator.fit(self.x[idx1], self.y[idx1])
                         if self.inner_update is not None:
                             estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
                                       method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
                                       batch_size=min(100, int(0.2 * n_samples)), verbose=False)
-                        current_impurity = log_loss(self.y[sample_indice[idx2]], estimator.predict_proba(self.x[sample_indice[idx2]]))
+                        current_impurity = log_loss(self.y[idx2], estimator.predict_proba(self.x[idx2]))
                         if current_impurity < best_impurity:
                             best_estimator = estimator
                             best_impurity = current_impurity
@@ -742,8 +742,8 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
                 for alpha in (0.1, 1.0, 10.0):
                     estimator = LogisticRegression(C=alpha)
-                    estimator.fit(self.x[sample_indice[idx1]], self.y[sample_indice[idx1]])
-                    current_impurity = log_loss(self.y[sample_indice[idx2]], estimator.predict(self.x[sample_indice[idx1]]))
+                    estimator.fit(self.x[idx1], self.y[idx1])
+                    current_impurity = log_loss(self.y[idx2], estimator.predict(self.x[idx2]))
                     if current_impurity < best_impurity:
                         best_estimator = estimator
                         best_impurity = current_impurity
