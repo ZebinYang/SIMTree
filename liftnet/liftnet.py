@@ -424,7 +424,7 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
             best_impurity = mean_squared_error(self.y[sample_indice], predict_func(self.x[sample_indice]))
         elif self.base_method == "sim":
             best_impurity = np.inf
-            idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=clf.random_state)
+            idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
             for reg_lambda in self.reg_lambda_list:
                 for reg_gamma in self.reg_gamma_list:
                     estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
@@ -442,7 +442,7 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
             predict_func = lambda x: best_estimator.predict(x)
         elif self.base_method == "glm":
             best_impurity = np.inf
-            idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=clf.random_state)
+            idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
             for alpha in (0.1, 1.0, 10.0):
                 estimator = Ridge(alpha=alpha)
                 estimator.fit(self.x[sample_indice[idx1]], self.y[sample_indice[idx1]])
@@ -717,7 +717,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
                 best_impurity = np.inf
-                idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=clf.random_state)
+                idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
                 for reg_lambda in self.reg_lambda_list:
                     for reg_gamma in self.reg_gamma_list:
                         estimator = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
@@ -739,7 +739,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
                 best_impurity = np.inf
-                idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=clf.random_state)
+                idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
                 for alpha in (0.1, 1.0, 10.0):
                     estimator = LogisticRegression(C=alpha)
                     estimator.fit(self.x[sample_indice[idx1]], self.y[sample_indice[idx1]])
