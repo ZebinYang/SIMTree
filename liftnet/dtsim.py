@@ -30,8 +30,8 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=0.1,
-                 inner_update=True, random_state=0):
+                 spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
+                 inner_update=None, random_state=0):
 
         self.max_depth = max_depth
         self.base_method = base_method
@@ -44,6 +44,7 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
         self.spline = spline
         self.degree = degree
         self.knot_num = knot_num
+        self.knot_dist = knot_dist
         self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
         self.inner_update = inner_update
@@ -91,15 +92,16 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
             raise ValueError("base_method must be an element of [smoothing_spline, p_spline, mono_p_spline, a_spline], got %s." % 
                          self.spline)
             
+        if self.knot_dist not in ["uniform", "quantile"]:
+            raise ValueError("method must be an element of [uniform, quantile], got %s." % self.knot_dist)
+
         if not isinstance(self.degree, int):
             raise ValueError("degree must be an integer, got %s." % self.degree)
-
             if self.degree < 0:
                 raise ValueError("degree must be >= 0, got" % self.degree)
 
         if not isinstance(self.knot_num, int):
             raise ValueError("knot_num must be an integer, got %s." % self.knot_num)
-
             if self.knot_num <= 0:
                 raise ValueError("knot_num must be > 0, got" % self.knot_num)
 
@@ -123,8 +125,9 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
                 raise ValueError("reg_gamma must be >= 0 and <=1, got %s." % self.reg_gamma)
             self.reg_gamma_list = [self.reg_gamma]
 
-        if not isinstance(self.inner_update, bool):
-            raise ValueError("inner_update must be a bool, got %s." % self.inner_update)
+        if self.inner_update is not None: 
+            if self.inner_update not in ["adam", "bfgs"]:
+                raise ValueError("inner_update must be None or an element of [adam, bfgs], got %s." % self.inner_update)
 
 
     def add_node(self, parent_id, is_left, is_leaf, depth, feature, threshold, impurity, sample_indice):
@@ -371,8 +374,8 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=0.1,
-                 inner_update=True, random_state=0):
+                 spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
+                 inner_update=None, random_state=0):
 
         super(DTSimRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -384,6 +387,7 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
                                  spline=spline,
                                  degree=degree,
                                  knot_num=knot_num,
+                                 knot_dist=knot_dist,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
                                  inner_update=inner_update,
@@ -399,8 +403,9 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
         if self.split_method == "constant":
             root_impurity = self.y.var()
         elif self.split_method == "sim":
-            root_clf = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree, reg_lambda=0, reg_gamma=0,
-                                     knot_num=self.knot_num, random_state=self.random_state)
+            root_clf = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
+                             reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
+                             random_state=self.random_state)
             root_clf.fit(self.x, self.y)
             root_impurity = mean_squared_error(self.y, root_clf.predict(self.x))
         elif self.split_method == "glm":
@@ -425,9 +430,9 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
                              reg_lambda=reg_lambda, reg_gamma=reg_gamma,
                              knot_num=self.knot_num, random_state=self.random_state)
                     estimator.fit(self.x[sample_indice], self.y[sample_indice])
-                    if self.inner_update:
+                    if self.inner_update is not None:
                         estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
-                                  method="adam", max_inner_iter=10, n_inner_iter_no_change=1,
+                                  method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
                                   batch_size=min(100, int(0.2 * n_samples)), verbose=False)
                     current_impurity = mean_squared_error(self.y[sample_indice], estimator.predict(self.x[sample_indice]))
                     if current_impurity < best_impurity:
@@ -610,13 +615,15 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
                 estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
-                                 reg_lambda=0, reg_gamma=0, knot_num=5, random_state=self.random_state)
+                                  reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
+                                  random_state=self.random_state)
                 estimator.fit(node_x[left_indice], node_y[left_indice])
                 left_impurity = mean_squared_error(node_y[left_indice], estimator.predict(node_x[left_indice]))
 
                 right_indice = sortted_indice[(i + 1):]
                 estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
-                                 reg_lambda=0, reg_gamma=0, knot_num=5, random_state=self.random_state)
+                                  reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
+                                  random_state=self.random_state)
                 estimator.fit(node_x[right_indice], node_y[right_indice])
                 right_impurity = mean_squared_error(node_y[right_indice], estimator.predict(node_x[right_indice]))
 
@@ -646,8 +653,8 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 spline="smoothing_spline", degree=2, knot_num=10, reg_lambda=0.1, reg_gamma=0.1,
-                 inner_update=True, random_state=0):
+                 spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
+                 inner_update=None, random_state=0):
 
         super(DTSimClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -659,6 +666,7 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                                  spline=spline,
                                  degree=degree,
                                  knot_num=knot_num,
+                                 knot_dist=knot_dist,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
                                  inner_update=inner_update,
@@ -683,8 +691,9 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
             p = self.y.mean()
             root_impurity = - p * np.log2(p) - (1 - p) * np.log2((1 - p)) if (p > 0) and (p < 1) else 0 
         elif self.split_method == "sim":
-            root_clf = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree, reg_lambda=0, reg_gamma=0,
-                                     knot_num=self.knot_num, random_state=self.random_state)
+            root_clf = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
+                             reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
+                             random_state=self.random_state)
             root_clf.fit(self.x, self.y)
             root_impurity = log_loss(self.y, root_clf.predict_proba(self.x))
         elif self.split_method == "glm":
@@ -709,13 +718,13 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                 for reg_lambda in self.reg_lambda_list:
                     for reg_gamma in self.reg_gamma_list:
                         estimator = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
-                                 reg_lambda=reg_lambda, reg_gamma=reg_gamma,
-                                 knot_num=self.knot_num, random_state=self.random_state)
+                                 reg_lambda=reg_lambda, reg_gamma=reg_gamma, knot_dist=self.knot_dist, knot_num=self.knot_num,
+                                 random_state=self.random_state)
                         estimator.fit(self.x[sample_indice], self.y[sample_indice])
-                        if self.inner_update:
+                        if self.inner_update is not None:
                             estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
-                                          method="adam", max_inner_iter=10, n_inner_iter_no_change=1,
-                                          batch_size=min(100, int(0.2 * n_samples)), verbose=False)
+                                      method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
+                                      batch_size=min(100, int(0.2 * n_samples)), verbose=False)
                         current_impurity = log_loss(self.y[sample_indice], estimator.predict_proba(self.x[sample_indice]))
                         if current_impurity < best_impurity:
                             best_estimator = estimator
@@ -921,7 +930,8 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                     left_impurity = 0
                 else:
                     left_clf = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
-                                     reg_lambda=0, reg_gamma=0, knot_num=5, random_state=self.random_state)
+                                      reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
+                                      random_state=self.random_state)
                     left_clf.fit(node_x[left_indice], node_y[left_indice])
                     left_impurity = log_loss(node_y[left_indice], left_clf.predict_proba(node_x[left_indice]))
 
@@ -930,7 +940,8 @@ class DTSimClassifier(BaseDTSim, ClassifierMixin):
                     right_impurity = 0
                 else:
                     right_clf = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
-                                     reg_lambda=0, reg_gamma=0, knot_num=5, random_state=self.random_state)
+                                      reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
+                                      random_state=self.random_state)
                     right_clf.fit(node_x[right_indice], node_y[right_indice])
                     right_impurity = log_loss(node_y[right_indice], right_clf.predict_proba(node_x[right_indice]))
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
