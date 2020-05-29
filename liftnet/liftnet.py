@@ -22,9 +22,9 @@ simplefilter("ignore", category=ConvergenceWarning)
 
 EPSILON = 1e-7
 
-class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
+class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
     """
-        Base class for sim classification and regression.
+        Base class for classification and regression.
      """
 
     @abstractmethod
@@ -370,14 +370,14 @@ class BaseDTSim(BaseEstimator, metaclass=ABCMeta):
                 fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
 
 
-class DTSimRegressor(BaseDTSim, ClassifierMixin):
+class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
                  spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
                  inner_update=None, random_state=0):
 
-        super(DTSimRegressor, self).__init__(max_depth=max_depth,
+        super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  base_method=base_method,
@@ -649,14 +649,14 @@ class DTSimRegressor(BaseDTSim, ClassifierMixin):
         return self.decision_function(x)
 
     
-class DTSimClassifier(BaseDTSim, ClassifierMixin):
+class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
                  spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
                  inner_update=None, random_state=0):
 
-        super(DTSimClassifier, self).__init__(max_depth=max_depth,
+        super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  base_method=base_method,
