@@ -8,11 +8,9 @@ from abc import ABCMeta, abstractmethod
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.utils import check_X_y, column_or_1d
 from sklearn.utils.validation import check_is_fitted
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import Ridge, LinearRegression
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
-from sklearn.model_selection import PredefinedSplit, GridSearchCV, train_test_split
-from sklearn.metrics import make_scorer, mean_squared_error, log_loss
-
-from sklearn.linear_model import Ridge, LinearRegression, LogisticRegression
 
 from pysim import SimRegressor, SimClassifier
 
@@ -31,7 +29,7 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
                  spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
-                 inner_update=None, random_state=0):
+                 inner_update=None, val_ratio=0.2, random_state=0):
 
         self.max_depth = max_depth
         self.base_method = base_method
@@ -49,6 +47,7 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
         self.reg_gamma = reg_gamma
         self.inner_update = inner_update
         
+        self.val_ratio = val_ratio
         self.random_state = random_state
 
         if self.split_method == "constant":
@@ -128,6 +127,11 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
         if self.inner_update is not None: 
             if self.inner_update not in ["adam", "bfgs"]:
                 raise ValueError("inner_update must be None or an element of [adam, bfgs], got %s." % self.inner_update)
+        
+        if self.val_ratio <= 0:
+            raise ValueError("val_ratio must be > 0, got" % self.val_ratio)
+        elif self.val_ratio >= 1:
+            raise ValueError("val_ratio must be < 1, got %s." % self.val_ratio)
 
 
     def add_node(self, parent_id, is_left, is_leaf, depth, feature, threshold, impurity, sample_indice):
@@ -375,7 +379,7 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
                  spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
-                 inner_update=None, random_state=0):
+                 inner_update=None, val_ratio=0.2, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -391,6 +395,7 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
                                  inner_update=inner_update,
+                                 val_ratio=val_ratio,
                                  random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -398,6 +403,24 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                          multi_output=True, y_numeric=True)
         return x, y.ravel()
     
+    def get_loss(self, label, pred):
+          
+        """method to calculate the MSE loss
+        
+        Parameters
+        ---------
+        label : array-like of shape (n_samples,)
+            containing the input dataset
+        pred : array-like of shape (n_samples,)
+            containing the output dataset
+        Returns
+        -------
+        float 
+            the MSE loss
+        """
+        loss = np.average((label - pred) ** 2, axis=0)
+        return loss
+
     def build_root(self):
         
         if self.split_method == "constant":
@@ -407,11 +430,11 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                              reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
                              random_state=self.random_state)
             root_clf.fit(self.x, self.y)
-            root_impurity = mean_squared_error(self.y, root_clf.predict(self.x))
+            root_impurity = self.get_loss(self.y, root_clf.predict(self.x))
         elif self.split_method == "glm":
             root_clf = LinearRegression()
             root_clf.fit(self.x, self.y)
-            root_impurity = mean_squared_error(self.y, root_clf.predict(self.x))
+            root_impurity = self.get_loss(self.y, root_clf.predict(self.x))
 
         return root_impurity
 
@@ -421,10 +444,10 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
         n_samples = len(sample_indice)
         if self.base_method == "constant":
             predict_func = lambda x: np.mean(self.y[sample_indice])
-            best_impurity = mean_squared_error(self.y[sample_indice], predict_func(self.x[sample_indice]))
+            best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         elif self.base_method == "sim":
             best_impurity = np.inf
-            idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
+            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio,, random_state=self.random_state)
             for reg_lambda in self.reg_lambda_list:
                 for reg_gamma in self.reg_gamma_list:
                     estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
@@ -434,19 +457,19 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                     if self.inner_update is not None:
                         estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
                                   method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
-                                  batch_size=min(100, int(0.2 * n_samples)), verbose=False)
-                    current_impurity = mean_squared_error(self.y[idx2], estimator.predict(self.x[idx2]))
+                                  batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, verbose=False)
+                    current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
                     if current_impurity < best_impurity:
                         best_estimator = estimator
                         best_impurity = current_impurity
             predict_func = lambda x: best_estimator.predict(x)
         elif self.base_method == "glm":
             best_impurity = np.inf
-            idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
+            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
             for alpha in (0.1, 1.0, 10.0):
                 estimator = Ridge(alpha=alpha)
                 estimator.fit(self.x[idx1], self.y[idx1])
-                current_impurity = mean_squared_error(self.y[idx2], estimator.predict(self.x[idx2]))
+                current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
                 if current_impurity < best_impurity:
                     best_estimator = estimator
                     best_impurity = current_impurity
@@ -551,12 +574,12 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                 left_indice = sortted_indice[:(i + 1)]
                 estimator = LinearRegression()
                 estimator.fit(node_x[left_indice], node_y[left_indice])
-                left_impurity = mean_squared_error(node_y[left_indice], estimator.predict(node_x[left_indice]))
+                left_impurity = self.get_loss(node_y[left_indice], estimator.predict(node_x[left_indice]))
 
                 right_indice = sortted_indice[(i + 1):]
                 estimator = LinearRegression()
                 estimator.fit(node_x[right_indice], node_y[right_indice])
-                right_impurity = mean_squared_error(node_y[right_indice], estimator.predict(node_x[right_indice]))
+                right_impurity = self.get_loss(node_y[right_indice], estimator.predict(node_x[right_indice]))
 
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
                 if current_impurity < best_impurity:
@@ -620,14 +643,14 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                                   reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
                                   random_state=self.random_state)
                 estimator.fit(node_x[left_indice], node_y[left_indice])
-                left_impurity = mean_squared_error(node_y[left_indice], estimator.predict(node_x[left_indice]))
+                left_impurity = self.get_loss(node_y[left_indice], estimator.predict(node_x[left_indice]))
 
                 right_indice = sortted_indice[(i + 1):]
                 estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
                                   reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
                                   random_state=self.random_state)
                 estimator.fit(node_x[right_indice], node_y[right_indice])
-                right_impurity = mean_squared_error(node_y[right_indice], estimator.predict(node_x[right_indice]))
+                right_impurity = self.get_loss(node_y[right_indice], estimator.predict(node_x[right_indice]))
 
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
                 if current_impurity < best_impurity:
@@ -656,7 +679,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
                  spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
-                 inner_update=None, random_state=0):
+                 inner_update=None, val_ratio=0.2, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -672,6 +695,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
                                  inner_update=inner_update,
+                                 val_ratio=val_ratio,
                                  random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -686,7 +710,30 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
 
         y = self._label_binarizer.transform(y) * 1.0
         return x, y.ravel()
-    
+
+    def get_loss(self, label, pred):
+        
+        """method to calculate the cross entropy loss
+        
+        Parameters
+        ---------
+        label : array-like of shape (n_samples,)
+            containing the input dataset
+        pred : array-like of shape (n_samples,)
+            containing the output dataset
+        sample_weight : array-like of shape (n_samples,), optional
+            containing sample weights
+        Returns
+        -------
+        float
+            the cross entropy loss
+        """
+
+        with np.errstate(divide="ignore", over="ignore"):
+            pred = np.clip(pred, self.EPS, 1. - self.EPS)
+            loss = - np.average(label * np.log(pred) + (1 - label) * np.log(1 - pred), axis=0)
+        return loss
+
     def build_root(self):
         
         if self.split_method == "constant":
@@ -697,11 +744,11 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                              reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
                              random_state=self.random_state)
             root_clf.fit(self.x, self.y)
-            root_impurity = log_loss(self.y, root_clf.predict_proba(self.x))
+            root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x))
         elif self.split_method == "glm":
             root_clf = LogisticRegression(penalty='none', random_state=self.random_state)
             root_clf.fit(self.x, self.y.ravel())
-            root_impurity = log_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
+            root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
         return root_impurity
 
     def build_leaf(self, sample_indice):
@@ -710,14 +757,15 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
         n_samples = len(sample_indice)
         if self.base_method == "constant":
             predict_func = lambda x: np.mean(self.y[sample_indice])
-            best_impurity = log_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
+            best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         elif self.base_method == "sim":
             if self.y[sample_indice].std() == 0:
                 best_impurity = 0
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
                 best_impurity = np.inf
-                idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
+                idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio,
+                                    stratify=self.y[sample_indice], random_state=self.random_state)
                 for reg_lambda in self.reg_lambda_list:
                     for reg_gamma in self.reg_gamma_list:
                         estimator = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
@@ -727,8 +775,8 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                         if self.inner_update is not None:
                             estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
                                       method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
-                                      batch_size=min(100, int(0.2 * n_samples)), verbose=False)
-                        current_impurity = log_loss(self.y[idx2], estimator.predict_proba(self.x[idx2]))
+                                      batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, verbose=False)
+                        current_impurity = self.get_loss(self.y[idx2], estimator.predict_proba(self.x[idx2]))
                         if current_impurity < best_impurity:
                             best_estimator = estimator
                             best_impurity = current_impurity
@@ -739,11 +787,12 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
                 best_impurity = np.inf
-                idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
+                idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio,
+                                    stratify=self.y[sample_indice], random_state=self.random_state)
                 for alpha in (0.1, 1.0, 10.0):
                     estimator = LogisticRegression(C=alpha)
                     estimator.fit(self.x[idx1], self.y[idx1])
-                    current_impurity = log_loss(self.y[idx2], estimator.predict(self.x[idx2]))
+                    current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
                     if current_impurity < best_impurity:
                         best_estimator = estimator
                         best_impurity = current_impurity
@@ -863,7 +912,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 else:
                     left_clf = LogisticRegression(penalty='none', random_state=self.random_state)
                     left_clf.fit(node_x[left_indice], node_y[left_indice].ravel())
-                    left_impurity = log_loss(node_y[left_indice], left_clf.predict_proba(node_x[left_indice]))
+                    left_impurity = self.get_loss(node_y[left_indice], left_clf.predict_proba(node_x[left_indice]))
 
                 right_indice = sortted_indice[(i + 1):]
                 if node_y[right_indice].std() == 0:
@@ -871,7 +920,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 else:
                     right_clf = LogisticRegression(penalty='none', random_state=self.random_state)
                     right_clf.fit(node_x[right_indice], node_y[right_indice].ravel())
-                    right_impurity = log_loss(node_y[right_indice], right_clf.predict_proba(node_x[right_indice]))
+                    right_impurity = self.get_loss(node_y[right_indice], right_clf.predict_proba(node_x[right_indice]))
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
 
                 if current_impurity < best_impurity:
@@ -937,7 +986,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                                       reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
                                       random_state=self.random_state)
                     left_clf.fit(node_x[left_indice], node_y[left_indice])
-                    left_impurity = log_loss(node_y[left_indice], left_clf.predict_proba(node_x[left_indice]))
+                    left_impurity = self.get_loss(node_y[left_indice], left_clf.predict_proba(node_x[left_indice]))
 
                 right_indice = sortted_indice[(i + 1):]
                 if node_y[right_indice].std() == 0:
@@ -947,7 +996,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                                       reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
                                       random_state=self.random_state)
                     right_clf.fit(node_x[right_indice], node_y[right_indice])
-                    right_impurity = log_loss(node_y[right_indice], right_clf.predict_proba(node_x[right_indice]))
+                    right_impurity = self.get_loss(node_y[right_indice], right_clf.predict_proba(node_x[right_indice]))
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
 
                 if current_impurity < best_impurity:
