@@ -445,8 +445,8 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
             idx1, idx2 = train_test_split(sample_indice, test_size=0.2, random_state=self.random_state)
             for alpha in (0.1, 1.0, 10.0):
                 estimator = Ridge(alpha=alpha)
-                estimator.fit(self.x[sample_indice[idx1]], self.y[sample_indice[idx1]])
-                current_impurity = mean_squared_error(self.y[sample_indice[idx2]], estimator.predict(self.x[sample_indice[idx2]]))
+                estimator.fit(self.x[idx1], self.y[idx1])
+                current_impurity = mean_squared_error(self.y[idx2], estimator.predict(self.x[idx2]))
                 if current_impurity < best_impurity:
                     best_estimator = estimator
                     best_impurity = current_impurity
