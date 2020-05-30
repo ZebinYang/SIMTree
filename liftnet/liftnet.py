@@ -765,8 +765,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
                 best_impurity = np.inf
-                idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio,
-                                    stratify=self.y[sample_indice], random_state=self.random_state)
+                idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
                 for reg_lambda in self.reg_lambda_list:
                     for reg_gamma in self.reg_gamma_list:
                         estimator = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
@@ -788,8 +787,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
                 best_impurity = np.inf
-                idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio,
-                                    stratify=self.y[sample_indice], random_state=self.random_state)
+                idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
                 for alpha in (0.1, 1.0, 10.0):
                     estimator = LogisticRegression(C=alpha)
                     estimator.fit(self.x[idx1], self.y[idx1])
