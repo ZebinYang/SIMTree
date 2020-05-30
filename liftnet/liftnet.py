@@ -447,7 +447,7 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
             best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         elif self.base_method == "sim":
             best_impurity = np.inf
-            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio,, random_state=self.random_state)
+            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
             for reg_lambda in self.reg_lambda_list:
                 for reg_gamma in self.reg_gamma_list:
                     estimator = SimRegressor(method='first_order_thres', spline=self.spline, degree=self.degree,
