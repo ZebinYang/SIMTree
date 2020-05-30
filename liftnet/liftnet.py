@@ -697,6 +697,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                                  inner_update=inner_update,
                                  val_ratio=val_ratio,
                                  random_state=random_state)
+        self.EPS = 10**(-8)
 
     def _validate_input(self, x, y):
         x, y = check_X_y(x, y, accept_sparse=["csr", "csc", "coo"],
