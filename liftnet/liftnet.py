@@ -762,7 +762,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
             best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         elif self.base_method == "sim":
             idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-            if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].std() == 0):
+            if (self.y[sample_indice].std() == 0) | (self.y[idx1].std() == 0)| (self.y[idx2].std() == 0):
                 best_impurity = 0
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
@@ -785,7 +785,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 predict_func = lambda x: best_estimator.predict_proba(x)
         elif self.base_method == "glm":
             idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-            if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].std() == 0):
+            if (self.y[sample_indice].std() == 0) | (self.y[idx1].std() == 0)| (self.y[idx2].std() == 0):
                 best_impurity = 0
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
