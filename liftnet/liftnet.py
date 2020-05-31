@@ -761,12 +761,12 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
             predict_func = lambda x: np.mean(self.y[sample_indice])
             best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         elif self.base_method == "sim":
-            if self.y[sample_indice].std() == 0:
+            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
+            if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].std() == 0):
                 best_impurity = 0
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
                 best_impurity = np.inf
-                idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
                 for reg_lambda in self.reg_lambda_list:
                     for reg_gamma in self.reg_gamma_list:
                         estimator = SimClassifier(method='first_order_thres', spline=self.spline, degree=self.degree,
@@ -784,7 +784,8 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                           batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, stratify=False, verbose=False)
                 predict_func = lambda x: best_estimator.predict_proba(x)
         elif self.base_method == "glm":
-            if self.y[sample_indice].std() == 0:
+            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
+            if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].std() == 0):
                 best_impurity = 0
                 predict_func = lambda x: np.mean(self.y[sample_indice])
             else:
