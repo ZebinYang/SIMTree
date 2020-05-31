@@ -774,8 +774,8 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                         estimator.fit(self.x[idx1], self.y[idx1])
                         if self.inner_update is not None:
                             estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
-                                      method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
-                                      batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, verbose=False)
+                              method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
+                              batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, stratify=False, verbose=False)
                         current_impurity = self.get_loss(self.y[idx2], estimator.predict_proba(self.x[idx2]))
                         if current_impurity < best_impurity:
                             best_estimator = estimator
