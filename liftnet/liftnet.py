@@ -370,7 +370,7 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
             if save_png:
                 if not os.path.exists(folder):
                     os.makedirs(folder)
-                fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
+                fig.savefig("%s.png" % save_path, bbox_inches="tight")
 
 
 class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
