@@ -913,7 +913,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 else:
                     left_clf = LogisticRegression(penalty='none', random_state=self.random_state)
                     left_clf.fit(node_x[left_indice], node_y[left_indice].ravel())
-                    left_impurity = self.get_loss(node_y[left_indice], left_clf.predict_proba(node_x[left_indice]))
+                    left_impurity = self.get_loss(node_y[left_indice], left_clf.predict_proba(node_x[left_indice])[:, 1])
 
                 right_indice = sortted_indice[(i + 1):]
                 if node_y[right_indice].std() == 0:
@@ -921,7 +921,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 else:
                     right_clf = LogisticRegression(penalty='none', random_state=self.random_state)
                     right_clf.fit(node_x[right_indice], node_y[right_indice].ravel())
-                    right_impurity = self.get_loss(node_y[right_indice], right_clf.predict_proba(node_x[right_indice]))
+                    right_impurity = self.get_loss(node_y[right_indice], right_clf.predict_proba(node_x[right_indice])[:, 1])
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
 
                 if current_impurity < best_impurity:
