@@ -282,13 +282,12 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
             else:
                 draw_tree[item["node_id"]].update({"xy": xy,
                                        "parent_xy": parent_xy,
-                                       "label": "X[" + str(item["feature"]) + "] <=" + str(np.round(item["threshold"], 3)) 
+                                       "label": "X" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3)) 
                                             + "\nimpurity = " + str(np.round(item["impurity"], 3)) 
                                             + "\nsamples = " + str(int(item["n_samples"])) 
                                             + "\nvalue = " + str(np.round(item["value"], 3))})
                 pending_node_list.append(self.tree[item["left_child_id"]])
                 pending_node_list.append(self.tree[item["right_child_id"]])
-
 
         fig = plt.figure(figsize=(2 ** (max_depth + 1), max_depth * 2))
         tree = fig.add_axes([0.0, 0.0, 1, 1])
