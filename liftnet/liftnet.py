@@ -9,7 +9,7 @@ from sklearn.preprocessing import LabelBinarizer
 from sklearn.utils import check_X_y, column_or_1d
 from sklearn.utils.validation import check_is_fitted
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Ridge, LinearRegression
+from sklearn.linear_model import Ridge, LinearRegression, LogisticRegression
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
 
 from pysim import SimRegressor, SimClassifier
