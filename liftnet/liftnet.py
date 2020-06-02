@@ -793,7 +793,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 for alpha in (0.1, 1.0, 10.0):
                     estimator = LogisticRegression(C=alpha)
                     estimator.fit(self.x[idx1], self.y[idx1])
-                    current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
+                    current_impurity = self.get_loss(self.y[idx2], estimator.predict_proba(self.x[idx2])[:, 1])
                     if current_impurity < best_impurity:
                         best_estimator = estimator
                         best_impurity = current_impurity
