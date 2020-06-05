@@ -475,7 +475,7 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                     best_estimator = estimator
                     best_impurity = current_impurity
             predict_func = lambda x: best_estimator.predict(x)
-            best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice][:, 1]))
+            best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity
     
     def node_split_constant(self, sample_indice):
@@ -800,7 +800,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                         best_estimator = estimator
                         best_impurity = current_impurity
                 predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
-                best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice][:, 1]))
+                best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity
     
     def node_split_constant(self, sample_indice):
