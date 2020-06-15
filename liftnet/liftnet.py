@@ -1018,10 +1018,11 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
         node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
               "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
         return node
-    
+
     def predict_proba(self, x):
-        return self.decision_function(x)
-    
+        proba = self.decision_function(x).reshape(-1, 1)
+        return np.hstack([1 - proba, proba])
+
     def predict(self, x):
-        pred_proba = self.predict_proba(x)
+        pred_proba = self.decision_function(x)
         return self._label_binarizer.inverse_transform(pred_proba)
