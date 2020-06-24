@@ -28,7 +28,7 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
+                 spline="smoothing_spline", knot_dist="quantile", degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
                  inner_update=None, val_ratio=0.2, random_state=0):
 
         self.max_depth = max_depth
@@ -377,7 +377,7 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
+                 spline="smoothing_spline", knot_dist="quantile", degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
                  inner_update=None, val_ratio=0.2, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
@@ -680,7 +680,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 spline="smoothing_spline", knot_dist="quantile", degree=2, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
+                 spline="smoothing_spline", knot_dist="quantile", degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
                  inner_update=None, val_ratio=0.2, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
