@@ -119,7 +119,7 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
                 raise ValueError("reg_gamma must be >= 0 and <=1, got %s." % self.reg_gamma)
             self.reg_gamma_list = [self.reg_gamma]
 
-        if isinstance(self.sim_update, bool):
+        if not isinstance(self.sim_update, bool):
             raise ValueError("sim_update must be boolean, got %s." % self.sim_update)
         
         if self.val_ratio <= 0:
