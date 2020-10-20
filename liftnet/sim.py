@@ -17,24 +17,6 @@ from abc import ABCMeta, abstractmethod
 
 from .smoothing_spline import SMSplineRegressor, SMSplineClassifier
 
-from rpy2 import robjects as ro
-from rpy2.robjects import numpy2ri
-from rpy2.robjects.packages import importr
-
-
-try:
-    fps = importr("fps")
-except:
-    try:
-        devtools = importr("devtools")
-    except:
-        utils = importr("utils")
-        utils.install_packages("devtools")
-        devtools = importr("devtools")
-    devtools.install_github("https://github.com/vqv/fps")
-    fps = importr("fps")
-    
-numpy2ri.activate()
 
 __all__ = ["SimRegressor", "SimClassifier"]
 
@@ -42,11 +24,8 @@ __all__ = ["SimRegressor", "SimClassifier"]
 class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, method="first_order", spline="smoothing_spline", reg_lambda=0.1, reg_gamma=0.1,
-                 knot_num=10, knot_dist="quantile", degree=3, random_state=0):
+    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, knot_dist="quantile", degree=3, random_state=0):
 
-        self.method = method
-        self.spline = spline
         self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
         self.knot_num = knot_num
@@ -173,58 +152,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         self._estimate_shape(xb, y, np.min(xb), np.max(xb), sample_weight)
         return self
     
-    
-    def fit_middle_update(self, x, y, sample_weight=None, proj_mat=None, method="adam", val_ratio=0.2, tol=0.0001,
-                  max_middle_iter=3, n_middle_iter_no_change=3, max_inner_iter=100, n_inner_iter_no_change=5,
-                  batch_size=100, learning_rate=1e-3, beta_1=0.9, beta_2=0.999, stratify=True, verbose=False):
-        """fine tune the fitted Sim model using middle update method
-
-        Parameters
-        ---------
-        x : array-like of shape (n_samples, n_features)
-            containing the input dataset
-        y : array-like of shape (n_samples,)
-            containing target values
-        sample_weight : array-like of shape (n_samples,), optional
-            containing sample weights
-        proj_mat : array-like of shape (n_features, n_features), optional
-            to project the projection indice for enhancing orthogonality
-        method : std, optional, default="adam"
-            the inner update method, including "adam" and "bfgs"
-        val_ratio : float, optional, default=0.2
-            the split ratio for validation set
-        tol : float, optional, default=0.0001
-            the tolerance for early stopping
-        max_middle_iter : int, optional, default=3
-            the maximal number of middle iteration
-        n_middle_iter_no_change : int, optional, default=3
-            the tolerance of non-improving middle iterations
-        max_inner_iter : int, optional, default=100
-            the maximal number of inner iteration for "adam" optimizer
-        n_inner_iter_no_change : int, optional, default=5
-            the tolerance of non-improving inner iteration for adam optimizer
-        batch_size : int, optional, default=100
-            the batch_size for adam optimizer
-        learning_rate : float, optional, default=1e-3
-            the learning rate for adam optimizer
-        beta_1 : float, optional, default=0.9
-            the beta_1 parameter for adam optimizer
-        beta_2 : float, optional, default=0.999
-            the beta_1 parameter for adam optimizer
-        stratify : bool, optional, default=True
-            whether to stratify the target variable when splitting the validation set
-        verbose : bool, optional, default=False
-            whether to show the training history
-        """
-
-        if method == "adam":                
-            self.fit_middle_update_adam(x, y, sample_weight, proj_mat, val_ratio, tol,
-                      max_middle_iter, n_middle_iter_no_change, max_inner_iter,
-                      n_inner_iter_no_change, batch_size, learning_rate, beta_1, beta_2, stratify, verbose)
-        elif method == "bfgs":
-            self.fit_middle_update_bfgs(x, y, sample_weight, proj_mat, val_ratio, tol, 
-                      max_middle_iter, n_middle_iter_no_change, max_inner_iter, stratify, verbose)
-
     def fit_middle_update_adam(self, x, y, sample_weight=None, proj_mat=None, val_ratio=0.2, tol=0.0001,
                       max_middle_iter=3, n_middle_iter_no_change=3, max_inner_iter=100, n_inner_iter_no_change=5,
                       batch_size=100, learning_rate=1e-3, beta_1=0.9, beta_2=0.999, stratify=True, verbose=False):
@@ -509,8 +436,7 @@ class SimRegressor(BaseSim, RegressorMixin):
         Random seed
     """
 
-    def __init__(self, reg_lambda=0.1, reg_gamma=0.1,
-                 knot_num=10, knot_dist="quantile", degree=3, random_state=0):
+    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, knot_dist="quantile", degree=3, random_state=0):
 
         super(SimRegressor, self).__init__(reg_lambda=reg_lambda,
                                 reg_gamma=reg_gamma,
