@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge, LinearRegression, LogisticRegression
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
 
-from pysim import SimRegressor, SimClassifier
+from .sim import SimRegressor, SimClassifier
 
 from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning
