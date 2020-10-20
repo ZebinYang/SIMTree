@@ -29,7 +29,7 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
                  knot_dist="quantile", degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
-                 inner_update=None, val_ratio=0.2, random_state=0):
+                 sim_update=False, val_ratio=0.2, random_state=0):
 
         self.max_depth = max_depth
         self.base_method = base_method
@@ -44,7 +44,7 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
         self.knot_dist = knot_dist
         self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
-        self.inner_update = inner_update
+        self.sim_update = sim_update
         
         self.val_ratio = val_ratio
         self.random_state = random_state
@@ -119,9 +119,8 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
                 raise ValueError("reg_gamma must be >= 0 and <=1, got %s." % self.reg_gamma)
             self.reg_gamma_list = [self.reg_gamma]
 
-        if self.inner_update is not None: 
-            if self.inner_update not in ["adam", "bfgs"]:
-                raise ValueError("inner_update must be None or an element of [adam, bfgs], got %s." % self.inner_update)
+        if isinstance(self.sim_update, bool):
+            raise ValueError("sim_update must be boolean, got %s." % self.sim_update)
         
         if self.val_ratio <= 0:
             raise ValueError("val_ratio must be > 0, got" % self.val_ratio)
@@ -373,7 +372,7 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
                  knot_dist="quantile", degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
-                 inner_update=None, val_ratio=0.2, random_state=0):
+                 sim_update=False, val_ratio=0.2, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -387,7 +386,7 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                                  knot_dist=knot_dist,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
-                                 inner_update=inner_update,
+                                 sim_update=sim_update,
                                  val_ratio=val_ratio,
                                  random_state=random_state)
 
@@ -451,9 +450,9 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                         best_estimator = estimator
                         best_impurity = current_impurity
             best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
-            if self.inner_update is not None:
-                best_estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
-                      method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
+            if self.sim_update:
+                best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice],
+                      max_inner_iter=10, n_inner_iter_no_change=1,
                       batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, stratify=False, verbose=False)
             predict_func = lambda x: best_estimator.predict(x)
             best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
@@ -674,7 +673,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
                  knot_dist="quantile", degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
-                 inner_update=None, val_ratio=0.2, random_state=0):
+                 sim_update=False, val_ratio=0.2, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -688,7 +687,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                                  knot_dist=knot_dist,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
-                                 inner_update=inner_update,
+                                 sim_update=sim_update,
                                  val_ratio=val_ratio,
                                  random_state=random_state)
 
@@ -770,9 +769,9 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                             best_estimator = estimator
                             best_impurity = current_impurity
                 best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
-                if self.inner_update is not None:
-                    best_estimator.fit_inner_update(self.x[sample_indice], self.y[sample_indice],
-                          method=self.inner_update, max_inner_iter=10, n_inner_iter_no_change=1,
+                if self.sim_update:
+                    best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice],
+                          max_inner_iter=10, n_inner_iter_no_change=1,
                           batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, stratify=False, verbose=False)
                 predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
                 best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
