@@ -9,5 +9,5 @@ setup(name='liftnet',
       license='GPL',
       packages=['liftnet'],
       install_requires=[
-          'matplotlib', 'numpy', 'sklearn', 'pysim @ git+https://github.com/ZebinYang/pysim.git'],
+          'matplotlib', 'numpy', 'sklearn'],
       zip_safe=False)
