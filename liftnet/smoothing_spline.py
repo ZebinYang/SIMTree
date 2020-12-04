@@ -284,7 +284,7 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
             kwargs = {"formula": Formula('y ~ x'),
                    "nknots": knot_idx, 
                    "lambdas": ro.r("NULL") if self.reg_gamma == "GCV" else self.reg_gamma,
-                   "rparm": 1e-6,
+                   "rparm": 1e-2,
                    "type": "lin" if self.degree==1 else "cub",
                    "data": pd.DataFrame({"x":x.ravel(), "y":y.ravel()}),
                    "weights": pd.DataFrame({"w":sample_weight})["w"]}
@@ -450,7 +450,7 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
                            "family": "binomial",
                            "nknots": knot_idx, 
                            "lambdas": ro.r("NULL") if self.reg_gamma == "GCV" else self.reg_gamma,
-                           "rparm": 1e-6,
+                           "rparm": 1e-2,
                            "type": "lin" if self.degree==1 else "cub",
                            "data": pd.DataFrame({"x":x.ravel(), "y":y.ravel()}),
                            "weights": pd.DataFrame({"w":sample_weight})["w"]}
