@@ -42,12 +42,12 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         if not isinstance(self.degree, int):
             raise ValueError("degree must be an integer, got %s." % self.degree)
         elif self.degree < 0:
-            raise ValueError("degree must be >= 0, got" % self.degree)
+            raise ValueError("degree must be >= 0, got %s." % self.degree)
         
         if not isinstance(self.knot_num, int):
             raise ValueError("knot_num must be an integer, got %s." % self.knot_num)
         elif self.knot_num <= 0:
-            raise ValueError("knot_num must be > 0, got" % self.knot_num)
+            raise ValueError("knot_num must be > 0, got %s." % self.knot_num)
 
         if self.knot_dist not in ["uniform", "quantile"]:
             raise ValueError("method must be an element of [uniform, quantile], got %s." % self.knot_dist)
@@ -592,7 +592,7 @@ class SimClassifier(BaseSim, ClassifierMixin):
             containing sample weights
         """
 
-        self.shape_fit_ = SMSplineRegressor(knot_num=self.knot_num, knot_dist=self.knot_dist, reg_gamma=self.reg_gamma,
+        self.shape_fit_ = SMSplineClassifier(knot_num=self.knot_num, knot_dist=self.knot_dist, reg_gamma=self.reg_gamma,
                                 xmin=xmin, xmax=xmax, degree=self.degree)
         self.shape_fit_.fit(x, y, sample_weight)
 

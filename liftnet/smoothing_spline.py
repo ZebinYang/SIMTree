@@ -65,7 +65,7 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
             raise ValueError("knot_num must be an integer, got %s." % self.knot_num)
         
         if self.knot_num <= 0:
-            raise ValueError("knot_num must be > 0, got" % self.knot_num)
+            raise ValueError("knot_num must be > 0, got %s." % self.knot_num)
 
         if self.knot_dist not in ["uniform", "quantile"]:
             raise ValueError("method must be an element of [uniform, quantile], got %s." % self.knot_dist)
@@ -73,7 +73,7 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
         if not isinstance(self.degree, int):
             raise ValueError("degree must be an integer, got %s." % self.degree)
         elif self.degree not in [1, 3]:
-            raise ValueError("degree must be 1 or 3, got" % self.degree)
+            raise ValueError("degree must be 1 or 3, got %s." % self.degree)
 
         if not isinstance(self.reg_gamma, str):
             if (self.reg_gamma < 0) or (self.reg_gamma > 1):
@@ -95,12 +95,16 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
         order : int
             order of derivative
         """
-        modelspec = self.sm_[int(np.where(self.sm_.names == "modelspec")[0][0])]
-        knots = np.array(modelspec[0])
-        coefs = np.array(modelspec[11]).reshape(-1, 1)
-        basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, d=order,
-                           xmin=0, xmax=1, periodic=False, intercept=True)
-        derivative = np.dot(basis[0], coefs).ravel()
+        
+        if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
+            derivative = np.zeros((x.shape[0], 1))
+        else:
+            modelspec = self.sm_[int(np.where(self.sm_.names == "modelspec")[0][0])]
+            knots = np.array(modelspec[0])
+            coefs = np.array(modelspec[11]).reshape(-1, 1)
+            basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, d=order,
+                               xmin=0, xmax=1, periodic=False, intercept=True)
+            derivative = np.dot(basis[0], coefs).ravel()
         return derivative
 
     def visualize(self):
@@ -147,10 +151,7 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
         x = x.copy()
         x[x < self.xmin] = self.xmin
         x[x > self.xmax] = self.xmax
-        if isinstance(self.sm_, np.ndarray):
-            pred = self.sm_ * np.ones(x.shape[0])
-            
-        elif isinstance(self.sm_, float):
+        if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
             pred = self.sm_ * np.ones(x.shape[0])
         else:
             if "family" in self.sm_.names:
@@ -283,7 +284,7 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
             kwargs = {"formula": Formula('y ~ x'),
                    "nknots": knot_idx, 
                    "lambdas": ro.r("NULL") if self.reg_gamma == "GCV" else self.reg_gamma,
-                   "rparm": 1e-3,
+                   "rparm": 1e-6,
                    "type": "lin" if self.degree==1 else "cub",
                    "data": pd.DataFrame({"x":x.ravel(), "y":y.ravel()}),
                    "weights": pd.DataFrame({"w":sample_weight})["w"]}
@@ -449,7 +450,7 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
                            "family": "binomial",
                            "nknots": knot_idx, 
                            "lambdas": ro.r("NULL") if self.reg_gamma == "GCV" else self.reg_gamma,
-                           "rparm": 1e-3,
+                           "rparm": 1e-6,
                            "type": "lin" if self.degree==1 else "cub",
                            "data": pd.DataFrame({"x":x.ravel(), "y":y.ravel()}),
                            "weights": pd.DataFrame({"w":sample_weight})["w"]}
