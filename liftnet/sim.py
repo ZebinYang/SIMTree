@@ -79,7 +79,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             sample_weight = sample_weight.ravel() / np.sum(sample_weight)
         return sample_weight
 
-    def _first_order_thres(self, x, y, sample_weight=None, proj_mat=None):
+    def _first_order_thres(self, x, y, sample_weight=None):
 
         """calculate the projection indice using the first order stein's identity subject to hard thresholding
 
@@ -91,8 +91,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             containing target values
         sample_weight : array-like of shape (n_samples,), optional
             containing sample weights
-        proj_mat : array-like of shape (n_features, n_features), optional
-            to project the projection indice for enhancing orthogonality
         Returns
         -------
         np.array of shape (n_features, 1)
@@ -104,16 +102,18 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         self.inv_cov = np.linalg.pinv(self.cov)
         s1 = np.dot(self.inv_cov, (x - self.mu).T).T
         zbar = np.average(y.reshape(-1, 1) * s1, axis=0, weights=sample_weight)
-        if proj_mat is not None:
-            zbar = np.dot(proj_mat, zbar)
-        zbar[np.abs(zbar) < self.reg_lambda * np.max(np.abs(zbar))] = 0
+        if x.shape[1] > 3:
+            thres = np.sort(np.abs(zbar))[::-1][2]
+        else:
+            thres = 0
+        zbar[np.abs(zbar) < thres] = 0
         if np.linalg.norm(zbar) > 0:
             beta = zbar / np.linalg.norm(zbar)
         else:
             beta = zbar
         return beta.reshape([-1, 1])
     
-    def fit(self, x, y, sample_weight=None, proj_mat=None):
+    def fit(self, x, y, sample_weight=None):
 
         """fit the Sim model
 
@@ -125,8 +125,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             containing target values
         sample_weight : array-like of shape (n_samples,), optional
             containing sample weights
-        proj_mat : array-like of shape (n_features, n_features), optional
-            to project the projection indice for enhancing orthogonality
         Returns
         -------
         object 
@@ -143,7 +141,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         else:
             sample_weight = sample_weight / np.sum(sample_weight)
         
-        self.beta_ = self._first_order_thres(x, y, sample_weight, proj_mat)
+        self.beta_ = self._first_order_thres(x, y, sample_weight)
         
         if len(self.beta_[np.abs(self.beta_) > 0]) > 0:
             if (self.beta_[np.abs(self.beta_) > 0][0] < 0):
@@ -152,7 +150,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         self._estimate_shape(xb, y, np.min(xb), np.max(xb), sample_weight)
         return self
     
-    def fit_middle_update_adam(self, x, y, sample_weight=None, proj_mat=None, val_ratio=0.2, tol=0.0001,
+    def fit_middle_update_adam(self, x, y, sample_weight=None, val_ratio=0.2, tol=0.0001,
                       max_middle_iter=3, n_middle_iter_no_change=3, max_inner_iter=100, n_inner_iter_no_change=5,
                       batch_size=100, learning_rate=1e-3, beta_1=0.9, beta_2=0.999, stratify=True, verbose=False):
 
@@ -166,8 +164,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             containing target values
         sample_weight : array-like of shape (n_samples,), optional
             containing sample weights
-        proj_mat : array-like of shape (n_features, n_features), optional
-            to project the projection indice for enhancing orthogonality
         val_ratio : float, optional, default=0.2
             the split ratio for validation set
         tol : float, optional, default=0.0001
@@ -287,9 +283,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
                     break
   
             ## thresholding and normalization
-            if proj_mat is not None:
-                theta_0 = np.dot(proj_mat, theta_0)
-
             theta_0[np.abs(theta_0) < self_copy.reg_lambda * np.max(np.abs(theta_0))] = 0
             if np.linalg.norm(theta_0) > 0:
                 theta_0 = theta_0 / np.linalg.norm(theta_0)
