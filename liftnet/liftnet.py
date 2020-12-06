@@ -342,7 +342,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
             best_left_impurity = self.get_loss(node_y[best_left_indice].ravel(), left_clf.predict(node_x[best_left_indice]))
             best_right_impurity = self.get_loss(node_y[best_right_indice].ravel(), right_clf.predict(node_x[best_right_indice]))
-            best_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+            best_impurity = (len(left_indice) * best_left_impurity + len(right_indice) * best_right_impurity) / n_samples
             
         node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
               "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
@@ -474,10 +474,10 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                              knot_dist=self.knot_dist, knot_num=self.knot_num,
                              random_state=self.random_state)
             right_clf.fit(node_x[best_right_indice], node_y[best_right_indice])
-
-            best_left_impurity = self.get_loss(node_y[best_left_indice].ravel(), left_clf.predict_proba(node_x[best_left_indice])[:, 1])
-            best_right_impurity = self.get_loss(node_y[best_right_indice].ravel(), right_clf.predict_proba(node_x[best_right_indice])[:, 1])
-            best_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+            
+            best_left_impurity = self.get_loss(node_y[best_left_indice].ravel(), left_clf.predict(node_x[best_left_indice]))
+            best_right_impurity = self.get_loss(node_y[best_right_indice].ravel(), right_clf.predict(node_x[best_right_indice]))
+            best_impurity = (len(left_indice) * best_left_impurity + len(right_indice) * best_right_impurity) / n_samples
             
         node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
               "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
