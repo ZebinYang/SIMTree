@@ -102,8 +102,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         """
 
         np.random.seed(self.random_state)
-        
-        self._validate_hyperparameters()
         x, y = self._validate_input(x, y)
         n_samples, n_features = x.shape
         if self.nterms is None:
