@@ -15,7 +15,7 @@ from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin, is_clas
 
 from abc import ABCMeta, abstractmethod
 
-from .smoothing_spline import SMSplineRegressor, SMSplineClassifier
+from .smspline import SMSplineRegressor, SMSplineClassifier
 
 
 __all__ = ["SimRegressor", "SimClassifier"]
@@ -24,9 +24,9 @@ __all__ = ["SimRegressor", "SimClassifier"]
 class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, knot_dist="quantile", degree=3, random_state=0):
+    def __init__(self, nterms=5, reg_gamma=0.1, knot_num=10, knot_dist="quantile", degree=3, random_state=0):
 
-        self.reg_lambda = reg_lambda
+        self.nterms = nterms
         self.reg_gamma = reg_gamma
         self.knot_num = knot_num
         self.knot_dist = knot_dist
@@ -38,6 +38,18 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         
         """method to validate model parameters
         """
+
+        if isinstance(self.nterms, int):
+            if self.nterms < 0:
+                raise ValueError("nterms must be >= 0, got %s." % self.nterms)
+        else:
+            raise ValueError("Invalid nterms.")
+
+        if (isinstance(self.reg_gamma, float)) or (isinstance(self.reg_gamma, int)):
+            if (self.reg_gamma < 0) or (self.reg_gamma > 1):
+                raise ValueError("reg_gamma must be >= 0 and <=1, got %s." % self.reg_gamma)
+        else:
+            raise ValueError("Invalid reg_gamma.")
 
         if not isinstance(self.degree, int):
             raise ValueError("degree must be an integer, got %s." % self.degree)
@@ -51,15 +63,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
         if self.knot_dist not in ["uniform", "quantile"]:
             raise ValueError("method must be an element of [uniform, quantile], got %s." % self.knot_dist)
-        
-        if not isinstance(self.reg_lambda, str):
-            if (self.reg_lambda < 0) or (self.reg_lambda > 1):
-                raise ValueError("reg_lambda must be >= 0 and <=1, got %s." % self.reg_lambda)
-
-        if not isinstance(self.reg_gamma, str):
-            if self.reg_gamma < 0:
-                raise ValueError("reg_lambda must be >= 0, got %s." % self.reg_gamma)
-
 
     def _validate_sample_weight(self, n_samples, sample_weight):
         
@@ -102,11 +105,8 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         self.inv_cov = np.linalg.pinv(self.cov)
         s1 = np.dot(self.inv_cov, (x - self.mu).T).T
         zbar = np.average(y.reshape(-1, 1) * s1, axis=0, weights=sample_weight)
-        if x.shape[1] > 3:
-            thres = np.sort(np.abs(zbar))[::-1][2]
-        else:
-            thres = 0
-        zbar[np.abs(zbar) < thres] = 0
+        inactive_index = np.argsort(np.abs(zbar))[::-1][self.nterms:]
+        zbar[inactive_index] = 0
         if np.linalg.norm(zbar) > 0:
             beta = zbar / np.linalg.norm(zbar)
         else:
@@ -283,7 +283,8 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
                     break
   
             ## thresholding and normalization
-            theta_0[np.abs(theta_0) < self_copy.reg_lambda * np.max(np.abs(theta_0))] = 0
+            inactive_index = np.argsort(np.abs(theta_0))[::-1][self.nterms:]
+            theta_0[inactive_index] = 0
             if np.linalg.norm(theta_0) > 0:
                 theta_0 = theta_0 / np.linalg.norm(theta_0)
                 if (theta_0[np.abs(theta_0) > 0][0] < 0):
@@ -403,17 +404,11 @@ class SimRegressor(BaseSim, RegressorMixin):
 
         "quantile": uniform quantiles of the given input data (not available when spline="p_spline" or "mono_p_spline")
 
-    reg_lambda : float, optional. default=0.1
-        Sparsity strength of projection indice, ranges from 0 to 1 
+    nterms : int, optional. default=5
+        Maximum number of selected projection indices.
 
     reg_gamma : float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
-    
-        For spline="smoothing_spline_bigsplines", it ranges from 0 to 1, and the suggested tuning grid is 1e-9 to 1e-1; and it can be set to "GCV".
-
-        For spline="smoothing_spline_mgcv", it ranges from 0 to :math:`+\infty`, and it can be set to "GCV".
-
-        For spline="p_spline","mono_p_spline" or "a_spline", it ranges from 0 to :math:`+\infty`
     
     degree : int, optional. default=3
         The order of the spline.
@@ -429,9 +424,9 @@ class SimRegressor(BaseSim, RegressorMixin):
         Random seed
     """
 
-    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, knot_dist="quantile", degree=3, random_state=0):
+    def __init__(self, nterms=5, reg_gamma=0.1, knot_num=10, knot_dist="quantile", degree=3, random_state=0):
 
-        super(SimRegressor, self).__init__(reg_lambda=reg_lambda,
+        super(SimRegressor, self).__init__(nterms=nterms,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 knot_dist=knot_dist,
@@ -507,24 +502,14 @@ class SimClassifier(BaseSim, ClassifierMixin):
 
         "quantile": uniform quantiles of the given input data (not available when spline="p_spline" or "mono_p_spline")
 
-    reg_lambda : float, optional. default=0.1
-        Sparsity strength of projection indice, ranges from 0 to 1 
+    nterms : int, optional. default=5
+        Maximum number of selected projection indices.
 
     reg_gamma : float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
-    
-        For spline="smoothing_spline_bigsplines", it ranges from 0 to 1, and the suggested tuning grid is 1e-9 to 1e-1; and it can be set to "GCV".
-
-        For spline="smoothing_spline_mgcv", it ranges from 0 to :math:`+\infty`, and it can be set to "GCV".
-
-        For spline="p_spline","mono_p_spline" or "a_spline", it ranges from 0 to :math:`+\infty`
-    
+        
     degree : int, optional. default=3
         The order of the spline.
-        
-        For spline="smoothing_spline_bigsplines", possible values include 1 and 3.
-    
-        For spline="smoothing_spline_mgcv", possible values include 3, 4, ....
 
     knot_num : int, optional. default=10
         Number of knots
@@ -533,10 +518,9 @@ class SimClassifier(BaseSim, ClassifierMixin):
         Random seed
     """
 
-    def __init__(self, reg_lambda=0.1, reg_gamma=0.1,
-                 knot_num=10, knot_dist="quantile", degree=3, random_state=0):
+    def __init__(self, nterms=5, reg_gamma=0.1, knot_num=10, knot_dist="quantile", degree=3, random_state=0):
 
-        super(SimClassifier, self).__init__(reg_lambda=reg_lambda,
+        super(SimClassifier, self).__init__(nterms=nterms,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 knot_dist=knot_dist,

@@ -1,39 +1,33 @@
 import os 
-import copy
 import numpy as np
-import pandas as pd
 from matplotlib import pyplot as plt
 from abc import ABCMeta, abstractmethod
 
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.utils import check_X_y, column_or_1d
-from sklearn.utils.validation import check_is_fitted
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Ridge, LinearRegression, LogisticRegression
-from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
+from sklearn.base import RegressorMixin, ClassifierMixin
 
 from .sim import SimRegressor, SimClassifier
+from .mob import BaseMobRegressor, BaseMobClassifier
 
 from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning
 simplefilter("ignore", category=ConvergenceWarning)
 
 EPSILON = 1e-7
+__all__ = ["LIFTNetRegressor", "LIFTNetClassifier"]
 
-class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
+
+class BaseLIFTNet(BaseMob, metaclass=ABCMeta):
     """
-        Base class for classification and regression.
+        Base LIFTNet class for classification and regression.
      """
 
     @abstractmethod
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 knot_dist="quantile", degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
+                 knot_dist="quantile", degree=3, knot_num=5, nterms=5, reg_gamma=0.1,
                  sim_update=False, val_ratio=0.2, random_state=0):
 
         self.max_depth = max_depth
-        self.base_method = base_method
-        self.split_method = split_method
         self.n_split_grid = n_split_grid
         self.split_features = split_features
         self.min_samples_leaf = min_samples_leaf
@@ -42,19 +36,12 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
         self.degree = degree
         self.knot_num = knot_num
         self.knot_dist = knot_dist
-        self.reg_lambda = reg_lambda
+        self.nterms = nterms
         self.reg_gamma = reg_gamma
         self.sim_update = sim_update
         
         self.val_ratio = val_ratio
         self.random_state = random_state
-
-        if self.split_method == "constant":
-            self.node_split = self.node_split_constant
-        elif self.split_method == "sim":
-            self.node_split = self.node_split_sim
-        elif self.split_method == "glm":
-            self.node_split = self.node_split_glm
 
     def _validate_hyperparameters(self):
 
@@ -99,15 +86,15 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
             if self.knot_num <= 0:
                 raise ValueError("knot_num must be > 0, got" % self.knot_num)
 
-        if isinstance(self.reg_lambda, list):
-            for val in self.reg_lambda:
+        if isinstance(self.nterms, list):
+            for val in self.nterms:
                 if val < 0:
-                    raise ValueError("all the elements in reg_lambda must be >= 0, got %s." % self.reg_lambda)
-            self.reg_lambda_list = self.reg_lambda  
-        elif (isinstance(self.reg_lambda, float)) or (isinstance(self.reg_lambda, int)):
-            if (self.reg_lambda < 0) or (self.reg_lambda > 1):
-                raise ValueError("reg_lambda must be >= 0 and <=1, got %s." % self.reg_lambda)
-            self.reg_lambda_list = [self.reg_lambda]
+                    raise ValueError("all the elements in nterms must be >= 0, got %s." % self.nterms)
+            self.nterms_list = self.nterms  
+        elif (isinstance(self.nterms, float)) or (isinstance(self.nterms, int)):
+            if (self.nterms < 0) or (self.nterms > 1):
+                raise ValueError("nterms must be >= 0 and <=1, got %s." % self.nterms)
+            self.nterms_list = [self.nterms]
 
         if isinstance(self.reg_gamma, list):
             for val in self.reg_gamma:
@@ -127,325 +114,260 @@ class BaseLIFTNet(BaseEstimator, metaclass=ABCMeta):
         elif self.val_ratio >= 1:
             raise ValueError("val_ratio must be < 1, got %s." % self.val_ratio)
 
-
-    def add_node(self, parent_id, is_left, is_leaf, depth, feature, threshold, impurity, sample_indice):
-
-        self.node_count += 1
-        if parent_id is not None:
-            if is_left:
-                self.tree[parent_id].update({"left_child_id":self.node_count})
-            else:
-                self.tree[parent_id].update({"right_child_id":self.node_count})
-
-        node_id = self.node_count
-        n_samples = len(sample_indice)
-        if is_leaf:
-            predict_func, estimator, best_impurity = self.build_leaf(sample_indice)
-            node = {"node_id":node_id, "parent_id":parent_id, "depth":depth, "feature":feature, "impurity":best_impurity,
-                  "n_samples": n_samples, "is_left":is_left, "is_leaf":is_leaf, "value":np.mean(self.y[sample_indice]),
-                  "predict_func":predict_func, "estimator":estimator}
-        else:
-            node = {"node_id":node_id, "parent_id":parent_id, "depth":depth,"feature":feature, "impurity":impurity,
-                  "n_samples": n_samples, "is_left":is_left, "is_leaf":is_leaf, "value":np.mean(self.y[sample_indice]),
-                  "left_child_id":None, "right_child_id":None, "threshold":threshold}            
-        self.tree.update({node_id:node})
-        return node_id
-    
-    def fit(self, x, y):
-
-        self.tree = {}
-        self.node_count = 0
-        self._validate_hyperparameters()
-        self.x, self.y = self._validate_input(x, y)
-        n_samples, n_features = self.x.shape
-        sample_indice = np.arange(n_samples)
-        if self.split_features is None:
-            self.split_features = np.arange(n_features).tolist()
-        
-        np.random.seed(self.random_state)
-        root_impurity = self.build_root()
-        root_node = {"sample_indice": sample_indice,
-                 "parent_id":None,
-                 "depth": 0,
-                 "impurity":root_impurity,
-                 "is_left":False}
-        pending_node_list = [root_node]
-        while len(pending_node_list) > 0:
-            stack_record = pending_node_list.pop()
-            sample_indice = stack_record["sample_indice"]
-            parent_id = stack_record["parent_id"]
-            depth = stack_record["depth"]
-            impurity = stack_record["impurity"]
-            is_left = stack_record["is_left"]
-
-            if sample_indice is None:
-                is_leaf = True
-            else:
-                n_samples = len(sample_indice)
-                is_leaf = (depth >= self.max_depth or
-                       n_samples < 2 * self.min_samples_leaf)
                 
-            if not is_leaf:
-                split = self.node_split(sample_indice)
-                impurity_improvement = impurity - split["impurity"]
-                is_leaf = (is_leaf or (impurity_improvement < self.min_impurity_decrease) or
-                        (split["left"] is None) or (split["right"] is None))
-              
-            if is_leaf:
-                node_id = self.add_node(parent_id, is_left, is_leaf, depth, 
-                                None, None, impurity, sample_indice)
-            else:
-                node_id = self.add_node(parent_id, is_left, is_leaf, depth, 
-                                split["feature"], split["threshold"], impurity, sample_indice)
+    def visualize_leaves(self, cols_per_row=3, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
 
-                pending_node_list.append({"sample_indice":split["left"],
-                                 "parent_id":node_id,
-                                 "depth":depth + 1,
-                                 "impurity":split["left_impurity"],
-                                 "is_left":True})
-                pending_node_list.append({"sample_indice":split["right"],
-                                 "parent_id":node_id,
-                                 "depth": depth + 1,
-                                 "impurity":split["right_impurity"],
-                                 "is_left":False})
-        return self
-
-    def decision_path(self, x):
-
-        n_samples = x.shape[0]
-        path_all = np.zeros((n_samples, self.node_count))
-        for idx, row in enumerate(x):
-            path = []
-            node = self.tree[1]
-            while not node['is_leaf']:
-                path.append(node["node_id"] - 1)
-                if row[node['feature']] < node['threshold']:
-                    node = self.tree[node['left_child_id']]
-                else:
-                    node = self.tree[node['right_child_id']]
-            path.append(node["node_id"] - 1)
-            path_all[idx][path] = 1
-        return path_all
-
-    def decision_function(self, x):
+        """draw the global interpretation of the fitted model
         
+        Parameters
+        ---------
+        cols_per_row : int, optional, default=3,
+            the number of sim models visualized on each row
+        folder : str, optional, defalut="./results/"
+            the folder of the file to be saved
+        name : str, optional, default="global_plot"
+            the name of the file to be saved
+        save_png : bool, optional, default=False
+            whether to save the figure in png form
+        save_eps : bool, optional, default=False
+            whether to save the figure in eps form
+        """
+
         check_is_fitted(self, "tree")
-            
-        leaf_idx = []
-        for row in x:
-            node = self.tree[1]
-            while not node['is_leaf']:
-                if row[node['feature']] < node['threshold']:
-                    node = self.tree[node['left_child_id']]
-                else:
-                    node = self.tree[node['right_child_id']]
-            leaf_idx.append(node['node_id'])
         
-        n_samples = x.shape[0]
-        pred = np.zeros((n_samples))
-        for node_id in np.unique(leaf_idx):
-            sample_indice = np.array(leaf_idx) == node_id
-            pred[sample_indice] = self.tree[node_id]['predict_func'](x[sample_indice, :]).ravel()
-        return pred
-                
-    def plot_tree(self, folder="./results/", name="demo", save_png=False, save_eps=False):
+        subfig_idx = 0
+        max_ids = len(self.leaf_estimators_)
+        fig = plt.figure(figsize=(8 * cols_per_row, 4.6 * int(np.ceil(max_ids / cols_per_row))))
+        outer = gridspec.GridSpec(int(np.ceil(max_ids / cols_per_row)), cols_per_row, wspace=0.15, hspace=0.25)
+        
+        projection_indices = np.array([est.beta_.flatten() for est in self.leaf_estimators_]).T
+        if projection_indices.shape[1] > 0:
+            xlim_min = - max(np.abs(self.projection_indices_.min() - 0.1), np.abs(self.projection_indices_.max() + 0.1))
+            xlim_max = max(np.abs(self.projection_indices_.min() - 0.1), np.abs(self.projection_indices_.max() + 0.1))
+        
+        for node_id, est in self.leaf_estimators_.items():
+            inner = outer[subfig_idx].subgridspec(2, 2, wspace=0.15, height_ratios=[6, 1], width_ratios=[3, 1])
+            ax1_main = fig.add_subplot(inner[0, 0])
+            xgrid = np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 100).reshape([-1, 1])
+            ygrid = est.shape_fit_.decision_function(xgrid)
+            ax1_main.plot(xgrid, ygrid, color="red")
+            ax1_main.set_xticklabels([])
+            ax1_main.set_title("Node " + str(node_id), fontsize=16)
+            fig.add_subplot(ax1_main)
 
-        draw_tree = copy.deepcopy(self.tree)
-        pending_node_list = [draw_tree[1]]
-        max_depth = np.max([item["depth"] for key, item in self.tree.items()])
-        while len(pending_node_list) > 0:
+            ax1_density = fig.add_subplot(inner[1, 0])  
+            xint = ((np.array(est.shape_fit_.bins_[1:]) + np.array(est.shape_fit_.bins_[:-1])) / 2).reshape([-1, 1]).reshape([-1])
+            ax1_density.bar(xint, est.shape_fit_.density_, width=xint[1] - xint[0])
+            ax1_main.get_shared_x_axes().join(ax1_main, ax1_density)
+            ax1_density.set_yticklabels([])
+            fig.add_subplot(ax1_density)
 
-            item = pending_node_list.pop()
-            if item["parent_id"] is None:
-                xy = (0.5, 0)
-                parent_xy = None
+            ax2 = fig.add_subplot(inner[:, 1])
+            if len(est.beta_) <= 20:
+                rects = ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
+                ax2.set_yticks(np.arange(len(est.beta_)))
+                ax2.set_yticklabels(["X" + str(idx + 1) for idx in range(len(est.beta_.ravel()))][::-1])
+                ax2.set_xlim(xlim_min, xlim_max)
+                ax2.set_ylim(-1, len(est.beta_))
+                ax2.axvline(0, linestyle="dotted", color="black")
             else:
-                parent_xy = draw_tree[item["parent_id"]]["xy"]
-                if item["is_left"]:
-                    xy = (parent_xy[0] - 1 / 2 ** (item["depth"] + 1), 3 * item["depth"] / (3 * max_depth + 2))
-                else:
-                    xy = (parent_xy[0] + 1 / 2 ** (item["depth"] + 1), 3 * item["depth"] / (3 * max_depth + 2))
+                right = np.round(np.linspace(0, np.round(len(est.beta_) * 0.45).astype(int), 5))
+                left = len(est.beta_) - 1 - right
+                input_ticks = np.unique(np.hstack([left, right])).astype(int)
 
-            if item["is_leaf"]:
-                draw_tree[item["node_id"]].update({"xy": xy, 
-                                      "parent_xy": parent_xy,
-                                      "estimator":item["estimator"],
-                                      "label": "impurity = " + str(np.round(item["impurity"], 3)) 
-                                             + "\nsamples = " + str(int(item["n_samples"]))
-                                             + "\nvalue = " + str(np.round(item["value"], 3))})
-            else:
-                draw_tree[item["node_id"]].update({"xy": xy,
-                                       "parent_xy": parent_xy,
-                                       "label": "X" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3)) 
-                                            + "\nimpurity = " + str(np.round(item["impurity"], 3)) 
-                                            + "\nsamples = " + str(int(item["n_samples"])) 
-                                            + "\nvalue = " + str(np.round(item["value"], 3))})
-                pending_node_list.append(self.tree[item["left_child_id"]])
-                pending_node_list.append(self.tree[item["right_child_id"]])
+                rects = ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
+                ax2.set_yticks(input_ticks)
+                ax2.set_yticklabels(["X" + str(idx + 1) for idx in input_ticks][::-1])
+                ax2.set_xlim(xlim_min, xlim_max)
+                ax2.set_ylim(-1, len(est.beta_))
+                ax2.axvline(0, linestyle="dotted", color="black")
+            fig.add_subplot(ax2)
+            subfig_idx += 1
 
-        fig = plt.figure(figsize=(2 ** (max_depth + 1), max_depth * 2))
-        tree = fig.add_axes([0.0, 0.0, 1, 1])
-        ax_width = tree.get_window_extent().width
-        ax_height = tree.get_window_extent().height
-
-        color_list = [229, 129, 57]
-        values = np.array([item["value"] for key, item in self.tree.items()])
-        min_value, max_value = values.min(), values.max()
-
-        for key, item in draw_tree.items():
-
-            alpha = (item["value"] - min_value) / (max_value - min_value)
-            color = [int(round(alpha * c + (1 - alpha) * 255, 0)) for c in color_list]
-            kwargs = dict(bbox={"fc": '#%2x%2x%2x' % tuple(color), "boxstyle": "round"}, arrowprops={"arrowstyle":"<-"}, 
-                          ha='center', va='center', zorder=100 - 10 * item["depth"], xycoords='axes pixels', fontsize=14)
-
-            if item["parent_id"] is None:
-                tree.annotate(item["label"], (item["xy"][0] * ax_width, (1 - item["xy"][1]) * ax_height), **kwargs)
-            else:
-                if item["is_left"]:
-                    tree.annotate(item["label"], ((item["parent_xy"][0] - 0.01 / 2 ** (item["depth"] + 1)) * ax_width,
-                                         (1 - item["parent_xy"][1] - 0.1 / max_depth) * ax_height),
-                                        (item["xy"][0] * ax_width, (1 - item["xy"][1]) * ax_height), **kwargs)
-                else:
-                    tree.annotate(item["label"], ((item["parent_xy"][0] + 0.01 / 2 ** (item["depth"] + 1)) * ax_width,
-                                         (1 - item["parent_xy"][1] - 0.1 / max_depth) * ax_height),
-                                        (item["xy"][0] * ax_width, (1 - item["xy"][1]) * ax_height), **kwargs)
-
-            if item["is_leaf"] and (self.base_method == "sim"):
-                sim = item["estimator"]
-                
-                if sim is None:
-                    leaf_constant = fig.add_axes([item["xy"][0] - 0.45 / (2 ** max_depth),
-                                       1 - 3 * max_depth / (3 * max_depth + 2) - 1 / max_depth,
-                                       0.85 / (2 ** max_depth), 0.6 / max_depth])
-                    leaf_constant.axhline(item["value"])
-                    leaf_constant.set_ylim(item["value"] - 0.5, item["value"] + 0.5)
-                    leaf_constant.axes.get_xaxis().set_ticks([])
-                    leaf_constant.axes.get_yaxis().set_ticks([])
-                else:
-                    leaf_ridge = fig.add_axes([item["xy"][0] - 0.45 / (2 ** max_depth),
-                                       1 - 3 * max_depth / (3 * max_depth + 2) - 1 / max_depth,
-                                       0.85 / (2 ** max_depth), 0.6 / max_depth])
-                    xgrid = np.linspace(sim.shape_fit_.xmin, sim.shape_fit_.xmax, 100).reshape([-1, 1])
-                    ygrid = sim.shape_fit_.decision_function(xgrid)
-                    leaf_ridge.plot(xgrid, ygrid)
-                    leaf_ridge.axes.get_xaxis().set_ticks([])
-                    leaf_ridge.axes.get_yaxis().set_ticks([])
-
-                    betas = np.hstack([item["estimator"].beta_ for key, item in draw_tree.items() 
-                                       if item["is_leaf"] and (item["estimator"] is not None)])
-                    xlim_min = - max(np.abs(betas.min() - 0.1), np.abs(betas.max() + 0.1))
-                    xlim_max = max(np.abs(betas.min() - 0.1), np.abs(betas.max() + 0.1))
-
-                    leaf_proj = fig.add_axes([item["xy"][0] - 0.45 / (2 ** max_depth),
-                                      1 - 3 * max_depth / (3 * max_depth + 2) - 1.5 / max_depth,
-                                     0.85 / (2 ** max_depth), 0.4 / max_depth])
-                    leaf_proj.bar(np.arange(0, len(sim.beta_),), sim.beta_.ravel())
-                    leaf_proj.bar(np.arange(len(sim.beta_)), sim.beta_.ravel())
-
-                    if len(sim.beta_) > 4:
-                        input_ticks = np.linspace(0.1 * len(sim.beta_), len(sim.beta_) * 0.9, 4).astype(int)
-                        input_labels = ["X" + str(idx + 1) for idx in input_ticks]
-                    else:
-                        input_ticks = np.arange(len(sim.beta_))
-                        input_labels = ["X" + str(idx + 1) for idx in input_ticks]
-                    leaf_proj.set_xticks(input_ticks)
-                    leaf_proj.set_xticklabels(input_labels)
-                    leaf_proj.set_ylim(xlim_min, xlim_max)
-                    leaf_proj.axes.get_yaxis().set_ticks([])
-        tree.set_axis_off()
         plt.show()
-        if max_depth > 0:
-            save_path = folder + name
-            if save_eps:
-                if not os.path.exists(folder):
-                    os.makedirs(folder)
-                fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
+        if max_ids > 0:
             if save_png:
                 if not os.path.exists(folder):
                     os.makedirs(folder)
-                fig.savefig("%s.png" % save_path, bbox_inches="tight")
+                save_path = folder + name
+                fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
+            if save_eps:
+                if not os.path.exists(folder):
+                    os.makedirs(folder)
+                save_path = folder + name
+                fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
 
 
-class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
+class LIFTNetRegressor(BaseLIFTNet, BaseMobRegressor, RegressorMixin):
     
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 knot_dist="quantile", degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
+                 knot_dist="quantile", degree=3, knot_num=5, nterms=5, reg_gamma=0.1,
                  sim_update=False, val_ratio=0.2, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
-                                 base_method=base_method,
-                                 split_method=split_method,
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
                                  degree=degree,
                                  knot_num=knot_num,
                                  knot_dist=knot_dist,
-                                 reg_lambda=reg_lambda,
+                                 nterms=nterms,
                                  reg_gamma=reg_gamma,
                                  sim_update=sim_update,
                                  val_ratio=val_ratio,
                                  random_state=random_state)
 
-    def _validate_input(self, x, y):
-        x, y = check_X_y(x, y, accept_sparse=["csr", "csc", "coo"],
-                         multi_output=True, y_numeric=True)
-        return x, y.ravel()
-    
-    def get_loss(self, label, pred):
-          
-        """method to calculate the MSE loss
-        
-        Parameters
-        ---------
-        label : array-like of shape (n_samples,)
-            containing the input dataset
-        pred : array-like of shape (n_samples,)
-            containing the output dataset
-        Returns
-        -------
-        float 
-            the MSE loss
-        """
-        loss = np.average((label - pred) ** 2, axis=0)
-        return loss
-
     def build_root(self):
         
-        if self.split_method == "constant":
-            root_impurity = self.y.var()
-        elif self.split_method == "sim":
-            root_clf = SimRegressor(reg_lambda=0, reg_gamma=0, degree=self.degree,
-                            knot_dist=self.knot_dist, knot_num=self.knot_num,
-                            random_state=self.random_state)
-            root_clf.fit(self.x, self.y)
-            root_impurity = self.get_loss(self.y, root_clf.predict(self.x))
-        elif self.split_method == "glm":
-            root_clf = LinearRegression()
-            root_clf.fit(self.x, self.y)
-            root_impurity = self.get_loss(self.y, root_clf.predict(self.x))
-
+        root_clf = SimRegressor(nterms=0, reg_gamma=0, degree=self.degree,
+                        knot_dist=self.knot_dist, knot_num=self.knot_num,
+                        random_state=self.random_state)
+        root_clf.fit(self.x, self.y)
+        root_impurity = self.get_loss(self.y, root_clf.predict(self.x))
         return root_impurity
 
     def build_leaf(self, sample_indice):
         
         best_estimator = None
         n_samples = len(sample_indice)
-        if self.base_method == "constant":
+        best_impurity = np.inf
+        idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
+        for nterms in self.nterms_list:
+            for reg_gamma in self.reg_gamma_list:
+                estimator = SimRegressor(nterms=nterms, reg_gamma=reg_gamma, degree=self.degree,
+                                 knot_num=self.knot_num, random_state=self.random_state)
+                estimator.fit(self.x[idx1], self.y[idx1])
+                current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
+                if current_impurity < best_impurity:
+                    best_estimator = estimator
+                    best_impurity = current_impurity
+        best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
+        if self.sim_update:
+            best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice],
+                  max_inner_iter=10, n_inner_iter_no_change=1,
+                  batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, stratify=False, verbose=False)
+        predict_func = lambda x: best_estimator.predict(x)
+        best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
+        return predict_func, best_estimator, best_impurity
+    
+    def node_split(self, sample_indice):
+        
+        node_x = self.x[sample_indice]
+        node_y = self.y[sample_indice]
+        n_samples, n_features = node_x.shape
+
+        best_feature = None
+        best_position = None
+        best_threshold = None
+        best_left_indice = None
+        best_right_indice = None
+        best_impurity = np.inf
+        best_left_impurity = np.inf
+        best_right_impurity = np.inf
+        for feature_indice in self.split_features:
+
+            current_feature = node_x[:, feature_indice]
+            sortted_indice = np.argsort(current_feature)
+            sortted_feature = current_feature[sortted_indice]
+            feature_range = sortted_feature[-1] - sortted_feature[0]
+            if feature_range < EPSILON:
+                continue
+
+            split_point = 0
+            for i, _ in enumerate(sortted_indice):
+
+                if i == (n_samples - 1):
+                    continue
+
+                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                    continue
+                
+                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                    continue
+
+                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
+                    continue
+
+                split_point += 1
+                left_indice = sortted_indice[:(i + 1)]
+                estimator = SimRegressor(nterms=0, reg_gamma=0, degree=self.degree,
+                                 knot_dist=self.knot_dist, knot_num=self.knot_num,
+                                 random_state=self.random_state)
+                estimator.fit(node_x[left_indice], node_y[left_indice])
+                left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict(node_x[left_indice]))
+
+                right_indice = sortted_indice[(i + 1):]
+                estimator = SimRegressor(nterms=0, reg_gamma=0, degree=self.degree,
+                                 knot_dist=self.knot_dist, knot_num=self.knot_num,
+                                 random_state=self.random_state)
+                estimator.fit(node_x[right_indice], node_y[right_indice])
+                right_impurity = self.get_loss(node_y[right_indice].ravel(), estimator.predict(node_x[right_indice]))
+
+                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+                if current_impurity < best_impurity:
+                    best_position = i + 1
+                    best_feature = feature_indice
+                    best_impurity = current_impurity
+                    best_left_impurity = left_impurity
+                    best_right_impurity = right_impurity
+                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+
+        if best_position is not None:
+            sortted_indice = np.argsort(node_x[:, best_feature])
+            best_left_indice = sample_indice[sortted_indice[:best_position]]
+            best_right_indice = sample_indice[sortted_indice[best_position:]]
+        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
+              "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
+        return node
+    
+    
+class LIFTNetClassifier(BaseLIFTNet, BaseMobClassifier, ClassifierMixin):
+    
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
+                 knot_dist="quantile", degree=3, knot_num=5, nterms=5, reg_gamma=0.1,
+                 sim_update=False, val_ratio=0.2, random_state=0):
+
+        super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
+                                 min_samples_leaf=min_samples_leaf,
+                                 min_impurity_decrease=min_impurity_decrease,
+                                 n_split_grid=n_split_grid,
+                                 split_features=split_features,
+                                 degree=degree,
+                                 knot_num=knot_num,
+                                 knot_dist=knot_dist,
+                                 nterms=nterms,
+                                 reg_gamma=reg_gamma,
+                                 sim_update=sim_update,
+                                 val_ratio=val_ratio,
+                                 random_state=random_state)
+
+    def build_root(self):
+        
+        root_clf = SimClassifier(nterms=0, reg_gamma=0, degree=self.degree,
+                         knot_dist=self.knot_dist, knot_num=self.knot_num,
+                         random_state=self.random_state)
+        root_clf.fit(self.x, self.y)
+        root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
+        return root_impurity
+
+    def build_leaf(self, sample_indice):
+        
+        best_estimator = None
+        n_samples = len(sample_indice)
+        idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
+        if (self.y[sample_indice].std() == 0) | (self.y[idx1].std() == 0)| (self.y[idx2].std() == 0):
+            best_impurity = 0
             predict_func = lambda x: np.mean(self.y[sample_indice])
-            best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
-        elif self.base_method == "sim":
+        else:
             best_impurity = np.inf
-            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-            for reg_lambda in self.reg_lambda_list:
+            for nterms in self.nterms_list:
                 for reg_gamma in self.reg_gamma_list:
-                    estimator = SimRegressor(reg_lambda=reg_lambda, reg_gamma=reg_gamma, degree=self.degree,
-                                     knot_num=self.knot_num, random_state=self.random_state)
+                    estimator = SimClassifier(degree=self.degree,
+                             nterms=nterms, reg_gamma=reg_gamma, knot_dist=self.knot_dist, knot_num=self.knot_num,
+                             random_state=self.random_state)
                     estimator.fit(self.x[idx1], self.y[idx1])
-                    current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
+                    current_impurity = self.get_loss(self.y[idx2], estimator.predict_proba(self.x[idx2])[:, 1])
                     if current_impurity < best_impurity:
                         best_estimator = estimator
                         best_impurity = current_impurity
@@ -454,487 +376,11 @@ class LIFTNetRegressor(BaseLIFTNet, ClassifierMixin):
                 best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice],
                       max_inner_iter=10, n_inner_iter_no_change=1,
                       batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, stratify=False, verbose=False)
-            predict_func = lambda x: best_estimator.predict(x)
-            best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
-        elif self.base_method == "glm":
-            best_impurity = np.inf
-            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-            for alpha in (0.1, 1.0, 10.0):
-                estimator = Ridge(alpha=alpha)
-                estimator.fit(self.x[idx1], self.y[idx1])
-                current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
-                if current_impurity < best_impurity:
-                    best_estimator = estimator
-                    best_impurity = current_impurity
-            predict_func = lambda x: best_estimator.predict(x)
-            best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
+            predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
+            best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity
     
-    def node_split_constant(self, sample_indice):
-        
-        node_x = self.x[sample_indice]
-        node_y = self.y[sample_indice]
-        n_samples, n_features = node_x.shape
-
-        best_impurity = np.inf
-        best_feature = None
-        best_threshold = None
-        best_left_indice = None
-        best_right_indice = None
-        for feature_indice in self.split_features:
-
-            current_feature = node_x[:, feature_indice]
-            sortted_indice = np.argsort(current_feature)
-            sortted_feature = current_feature[sortted_indice]
-            feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
-                continue
-
-            sum_left = 0
-            sum_total = np.sum(node_y)
-            sq_sum_total = np.sum(node_y ** 2)
-            for i, _ in enumerate(sortted_indice):
-
-                n_left = i + 1
-                n_right = n_samples - i - 1
-                sum_left += node_y[sortted_indice[i]]
-                if i == (n_samples - 1):
-                    continue
-
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
-                    continue
-
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
-                    continue
-
-                current_impurity = (sq_sum_total / n_samples - (sum_left / n_left) ** 2 * n_left / n_samples -
-                             ((sum_total - sum_left) / n_right) ** 2 * n_right / n_samples)
-
-                if current_impurity < best_impurity:
-                    best_position = i + 1
-                    best_feature = feature_indice
-                    best_impurity = current_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
-
-        sortted_indice = np.argsort(node_x[:, best_feature])
-        best_left_indice = sample_indice[sortted_indice[:best_position]]
-        best_right_indice = sample_indice[sortted_indice[best_position:]]
-        best_left_impurity = node_y[sortted_indice[:best_position]].var()
-        best_right_impurity = node_y[sortted_indice[best_position:]].var()
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
-              "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
-        return node
-    
-        
-    def node_split_glm(self, sample_indice):
-        
-        node_x = self.x[sample_indice]
-        node_y = self.y[sample_indice]
-        n_samples, n_features = node_x.shape
-
-        best_feature = None
-        best_position = None
-        best_threshold = None
-        best_left_indice = None
-        best_right_indice = None
-        best_impurity = np.inf
-        best_left_impurity = np.inf
-        best_right_impurity = np.inf
-        for feature_indice in self.split_features:
-
-            current_feature = node_x[:, feature_indice]
-            sortted_indice = np.argsort(current_feature)
-            sortted_feature = current_feature[sortted_indice]
-            feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
-                continue
-
-            split_point = 0
-            for i, _ in enumerate(sortted_indice):
-
-                if i == (n_samples - 1):
-                    continue
-
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
-                    continue
-                
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
-                    continue
-
-                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
-                    continue
-
-                split_point += 1
-                left_indice = sortted_indice[:(i + 1)]
-                estimator = LinearRegression()
-                estimator.fit(node_x[left_indice], node_y[left_indice])
-                left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict(node_x[left_indice]))
-
-                right_indice = sortted_indice[(i + 1):]
-                estimator = LinearRegression()
-                estimator.fit(node_x[right_indice], node_y[right_indice])
-                right_impurity = self.get_loss(node_y[right_indice].ravel(), estimator.predict(node_x[right_indice]))
-
-                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
-                if current_impurity < best_impurity:
-                    best_position = i + 1
-                    best_feature = feature_indice
-                    best_impurity = current_impurity
-                    best_left_impurity = left_impurity
-                    best_right_impurity = right_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
-
-        if best_position is not None:
-            sortted_indice = np.argsort(node_x[:, best_feature])
-            best_left_indice = sample_indice[sortted_indice[:best_position]]
-            best_right_indice = sample_indice[sortted_indice[best_position:]]
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
-              "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
-        return node
-
-    
-    def node_split_sim(self, sample_indice):
-        
-        node_x = self.x[sample_indice]
-        node_y = self.y[sample_indice]
-        n_samples, n_features = node_x.shape
-
-        best_feature = None
-        best_position = None
-        best_threshold = None
-        best_left_indice = None
-        best_right_indice = None
-        best_impurity = np.inf
-        best_left_impurity = np.inf
-        best_right_impurity = np.inf
-        for feature_indice in self.split_features:
-
-            current_feature = node_x[:, feature_indice]
-            sortted_indice = np.argsort(current_feature)
-            sortted_feature = current_feature[sortted_indice]
-            feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
-                continue
-
-            split_point = 0
-            for i, _ in enumerate(sortted_indice):
-
-                if i == (n_samples - 1):
-                    continue
-
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
-                    continue
-                
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
-                    continue
-
-                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
-                    continue
-
-                split_point += 1
-                left_indice = sortted_indice[:(i + 1)]
-                estimator = SimRegressor(reg_lambda=0, reg_gamma=0, degree=self.degree,
-                                 knot_dist=self.knot_dist, knot_num=self.knot_num,
-                                 random_state=self.random_state)
-                estimator.fit(node_x[left_indice], node_y[left_indice])
-                left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict(node_x[left_indice]))
-
-                right_indice = sortted_indice[(i + 1):]
-                estimator = SimRegressor(reg_lambda=0, reg_gamma=0, degree=self.degree,
-                                 knot_dist=self.knot_dist, knot_num=self.knot_num,
-                                 random_state=self.random_state)
-                estimator.fit(node_x[right_indice], node_y[right_indice])
-                right_impurity = self.get_loss(node_y[right_indice].ravel(), estimator.predict(node_x[right_indice]))
-
-                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
-                if current_impurity < best_impurity:
-                    best_position = i + 1
-                    best_feature = feature_indice
-                    best_impurity = current_impurity
-                    best_left_impurity = left_impurity
-                    best_right_impurity = right_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
-
-        if best_position is not None:
-            sortted_indice = np.argsort(node_x[:, best_feature])
-            best_left_indice = sample_indice[sortted_indice[:best_position]]
-            best_right_indice = sample_indice[sortted_indice[best_position:]]
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
-              "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
-        return node
-    
-        
-    def predict(self, x):
-        return self.decision_function(x)
-
-    
-class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
-    
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_method="constant", base_method="constant", n_split_grid=10, split_features=None,
-                 knot_dist="quantile", degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
-                 sim_update=False, val_ratio=0.2, random_state=0):
-
-        super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
-                                 min_samples_leaf=min_samples_leaf,
-                                 min_impurity_decrease=min_impurity_decrease,
-                                 base_method=base_method,
-                                 split_method=split_method,
-                                 n_split_grid=n_split_grid,
-                                 split_features=split_features,
-                                 degree=degree,
-                                 knot_num=knot_num,
-                                 knot_dist=knot_dist,
-                                 reg_lambda=reg_lambda,
-                                 reg_gamma=reg_gamma,
-                                 sim_update=sim_update,
-                                 val_ratio=val_ratio,
-                                 random_state=random_state)
-
-    def _validate_input(self, x, y):
-        x, y = check_X_y(x, y, accept_sparse=["csr", "csc", "coo"],
-                         multi_output=True)
-        if y.ndim == 2 and y.shape[1] == 1:
-            y = column_or_1d(y, warn=False)
-
-        self._label_binarizer = LabelBinarizer()
-        self._label_binarizer.fit(y)
-        self.classes_ = self._label_binarizer.classes_
-
-        y = self._label_binarizer.transform(y) * 1.0
-        return x, y.ravel()
-
-    def get_loss(self, label, pred):
-        
-        """method to calculate the cross entropy loss
-        
-        Parameters
-        ---------
-        label : array-like of shape (n_samples,)
-            containing the input dataset
-        pred : array-like of shape (n_samples,)
-            containing the output dataset
-        sample_weight : array-like of shape (n_samples,), optional
-            containing sample weights
-        Returns
-        -------
-        float
-            the cross entropy loss
-        """
-
-        with np.errstate(divide="ignore", over="ignore"):
-            pred = np.clip(pred, EPSILON, 1. - EPSILON)
-            loss = - np.average(label * np.log(pred) + (1 - label) * np.log(1 - pred), axis=0)
-        return loss
-
-    def build_root(self):
-        
-        if self.split_method == "constant":
-            p = self.y.mean()
-            root_impurity = - p * np.log2(p) - (1 - p) * np.log2((1 - p)) if (p > 0) and (p < 1) else 0 
-        elif self.split_method == "sim":
-            root_clf = SimClassifier(reg_lambda=0, reg_gamma=0, degree=self.degree,
-                             knot_dist=self.knot_dist, knot_num=self.knot_num,
-                             random_state=self.random_state)
-            root_clf.fit(self.x, self.y)
-            root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
-        elif self.split_method == "glm":
-            root_clf = LogisticRegression(penalty='none', random_state=self.random_state)
-            root_clf.fit(self.x, self.y.ravel())
-            root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
-        return root_impurity
-
-    def build_leaf(self, sample_indice):
-        
-        best_estimator = None
-        n_samples = len(sample_indice)
-        if self.base_method == "constant":
-            predict_func = lambda x: np.mean(self.y[sample_indice])
-            best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
-        elif self.base_method == "sim":
-            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-            if (self.y[sample_indice].std() == 0) | (self.y[idx1].std() == 0)| (self.y[idx2].std() == 0):
-                best_impurity = 0
-                predict_func = lambda x: np.mean(self.y[sample_indice])
-            else:
-                best_impurity = np.inf
-                for reg_lambda in self.reg_lambda_list:
-                    for reg_gamma in self.reg_gamma_list:
-                        estimator = SimClassifier(degree=self.degree,
-                                 reg_lambda=reg_lambda, reg_gamma=reg_gamma, knot_dist=self.knot_dist, knot_num=self.knot_num,
-                                 random_state=self.random_state)
-                        estimator.fit(self.x[idx1], self.y[idx1])
-                        current_impurity = self.get_loss(self.y[idx2], estimator.predict_proba(self.x[idx2])[:, 1])
-                        if current_impurity < best_impurity:
-                            best_estimator = estimator
-                            best_impurity = current_impurity
-                best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
-                if self.sim_update:
-                    best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice],
-                          max_inner_iter=10, n_inner_iter_no_change=1,
-                          batch_size=min(100, int(0.2 * n_samples)), val_ratio=self.val_ratio, stratify=False, verbose=False)
-                predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
-                best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
-        elif self.base_method == "glm":
-            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-            if (self.y[sample_indice].std() == 0) | (self.y[idx1].std() == 0)| (self.y[idx2].std() == 0):
-                best_impurity = 0
-                predict_func = lambda x: np.mean(self.y[sample_indice])
-            else:
-                best_impurity = np.inf
-                idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-                for alpha in (0.1, 1.0, 10.0):
-                    estimator = LogisticRegression(C=alpha)
-                    estimator.fit(self.x[idx1], self.y[idx1])
-                    current_impurity = self.get_loss(self.y[idx2], estimator.predict_proba(self.x[idx2])[:, 1])
-                    if current_impurity < best_impurity:
-                        best_estimator = estimator
-                        best_impurity = current_impurity
-                predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
-                best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
-        return predict_func, best_estimator, best_impurity
-    
-    def node_split_constant(self, sample_indice):
-        
-        node_x = self.x[sample_indice]
-        node_y = self.y[sample_indice]
-        n_samples, n_features = node_x.shape
-
-        best_feature = None
-        best_position = None
-        best_threshold = None
-        best_left_indice = None
-        best_right_indice = None
-        best_impurity = np.inf
-        best_left_impurity = np.inf
-        best_right_impurity = np.inf
-        for feature_indice in self.split_features:
-
-            current_feature = node_x[:, feature_indice]
-            sortted_indice = np.argsort(current_feature)
-            sortted_feature = current_feature[sortted_indice]
-            feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
-                continue
-
-            sum_left = 0
-            sum_total = np.sum(node_y)
-            for i, _ in enumerate(sortted_indice):
-
-                n_left = i + 1
-                n_right = n_samples - i - 1
-                sum_left += node_y[sortted_indice[i]]
-                if i == (n_samples - 1):
-                    continue
-
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
-                    continue
-
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
-                    continue
-
-                left_impurity = 0 
-                right_impurity = 0
-                pleft = sum_left / n_left
-                pright = (sum_total - sum_left) / n_right
-                if (pleft > 0) and (pleft < 1):
-                    left_impurity = (- pleft * np.log2(pleft) - (1 - pleft) * np.log2((1 - pleft)))
-                if (pright > 0) and (pright < 1):
-                    right_impurity = (- pright * np.log2(pright) - (1 - pright) * np.log2((1 - pright)))
-                current_impurity = (n_left / n_samples * left_impurity + n_right / n_samples * right_impurity)
-
-                if current_impurity < best_impurity:
-                    best_position = i + 1
-                    best_feature = feature_indice
-                    best_impurity = current_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
-
-        if best_position is not None:
-            sortted_indice = np.argsort(node_x[:, best_feature])
-            best_left_indice = sample_indice[sortted_indice[:best_position]]
-            best_right_indice = sample_indice[sortted_indice[best_position:]]
-            
-            pleft = node_y[sortted_indice[:best_position]].mean()
-            pright = node_y[sortted_indice[best_position:]].mean()
-            best_left_impurity = - pleft * np.log2(pleft) - (1 - pleft) * np.log2((1 - pleft)) if (pleft > 0) and (pleft < 1) else 0 
-            best_right_impurity = - pright * np.log2(pright) - (1 - pright) * np.log2((1 - pright)) if (pright > 0) and (pright < 1) else 0 
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
-             "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
-        return node
-    
-    def node_split_glm(self, sample_indice):
-        
-        node_x = self.x[sample_indice]
-        node_y = self.y[sample_indice]
-        n_samples, n_features = node_x.shape
-
-        best_feature = None
-        best_position = None
-        best_threshold = None
-        best_left_indice = None
-        best_right_indice = None
-        best_impurity = np.inf
-        best_left_impurity = np.inf
-        best_right_impurity = np.inf
-        for feature_indice in self.split_features:
-
-            current_feature = node_x[:, feature_indice]
-            sortted_indice = np.argsort(current_feature)
-            sortted_feature = current_feature[sortted_indice]
-            feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
-                continue
-
-            split_point = 0
-            for i, _ in enumerate(sortted_indice):
-
-                if i == (n_samples - 1):
-                    continue
-
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
-                    continue
-                
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
-                    continue
-
-                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
-                    continue
-
-                split_point += 1
-                left_indice = sortted_indice[:(i + 1)]
-                if node_y[left_indice].std() == 0:
-                    left_impurity = 0
-                else:
-                    left_clf = LogisticRegression(penalty='none', random_state=self.random_state)
-                    left_clf.fit(node_x[left_indice], node_y[left_indice].ravel())
-                    left_impurity = self.get_loss(node_y[left_indice].ravel(), left_clf.predict_proba(node_x[left_indice])[:, 1])
-
-                right_indice = sortted_indice[(i + 1):]
-                if node_y[right_indice].std() == 0:
-                    right_impurity = 0
-                else:
-                    right_clf = LogisticRegression(penalty='none', random_state=self.random_state)
-                    right_clf.fit(node_x[right_indice], node_y[right_indice].ravel())
-                    right_impurity = self.get_loss(node_y[right_indice].ravel(), right_clf.predict_proba(node_x[right_indice])[:, 1])
-                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
-
-                if current_impurity < best_impurity:
-                    best_position = i + 1
-                    best_feature = feature_indice
-                    best_impurity = current_impurity
-                    best_left_impurity = left_impurity
-                    best_right_impurity = right_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
-
-        if best_position is not None:
-            sortted_indice = np.argsort(node_x[:, best_feature])
-            best_left_indice = sample_indice[sortted_indice[:best_position]]
-            best_right_indice = sample_indice[sortted_indice[best_position:]]
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
-              "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
-        return node
-
-    def node_split_sim(self, sample_indice):
+    def node_split(self, sample_indice):
         
         node_x = self.x[sample_indice]
         node_y = self.y[sample_indice]
@@ -977,7 +423,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                 if node_y[left_indice].std() == 0:
                     left_impurity = 0
                 else:
-                    left_clf = SimClassifier(reg_lambda=0, reg_gamma=0, degree=self.degree,
+                    left_clf = SimClassifier(nterms=0, reg_gamma=0, degree=self.degree,
                                      knot_dist=self.knot_dist, knot_num=self.knot_num,
                                      random_state=self.random_state)
                     left_clf.fit(node_x[left_indice], node_y[left_indice])
@@ -988,7 +434,7 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
                     right_impurity = 0
                 else:
                     right_clf = SimClassifier(degree=self.degree,
-                                      reg_lambda=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
+                                      nterms=0, reg_gamma=0, knot_dist=self.knot_dist, knot_num=self.knot_num,
                                       random_state=self.random_state)
                     right_clf.fit(node_x[right_indice], node_y[right_indice])
                     right_impurity = self.get_loss(node_y[right_indice].ravel(), right_clf.predict_proba(node_x[right_indice])[:, 1])
@@ -1009,11 +455,3 @@ class LIFTNetClassifier(BaseLIFTNet, ClassifierMixin):
         node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
               "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
         return node
-
-    def predict_proba(self, x):
-        proba = self.decision_function(x).reshape(-1, 1)
-        return np.hstack([1 - proba, proba])
-
-    def predict(self, x):
-        pred_proba = self.decision_function(x)
-        return self._label_binarizer.inverse_transform(pred_proba)
