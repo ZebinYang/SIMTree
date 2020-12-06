@@ -165,8 +165,8 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         
         projection_indices = np.array([est.beta_.flatten() for nodeid, est in self.leaf_estimators_.items()]).T
         if projection_indices.shape[1] > 0:
-            xlim_min = - max(np.abs(projection_indices_.min() - 0.1), np.abs(projection_indices_.max() + 0.1))
-            xlim_max = max(np.abs(projection_indices_.min() - 0.1), np.abs(projection_indices_.max() + 0.1))
+            xlim_min = - max(np.abs(projection_indices.min() - 0.1), np.abs(projection_indices.max() + 0.1))
+            xlim_max = max(np.abs(projection_indices.min() - 0.1), np.abs(projection_indices.max() + 0.1))
 
         for node_id, est in self.leaf_estimators_.items():
             inner = outer[subfig_idx].subgridspec(2, 2, wspace=0.15, height_ratios=[6, 1], width_ratios=[3, 1])
