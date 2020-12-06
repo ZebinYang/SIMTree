@@ -107,9 +107,9 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         if not isinstance(self.sim_update, bool):
             raise ValueError("sim_update must be boolean, got %s." % self.sim_update)
             
-    def _first_order_thres(self, x, y, sample_weight=None):
+    def _first_order(self, x, y, sample_weight=None):
 
-        """calculate the projection indice using the first order stein's identity subject to hard thresholding
+        """calculate the projection indice using the first order stein's identity
 
         Parameters
         ---------
@@ -287,7 +287,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        beta_parent = self._first_order_thres(node_x, node_y)
+        beta_parent = self._first_order(node_x, node_y)
         for feature_indice in self.split_features:
 
             current_feature = node_x[:, feature_indice]
@@ -315,8 +315,8 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
                 right_indice = sortted_indice[(i + 1):]
-                beta_left = clff._first_order_thres(node_x[left_indice], node_y[left_indice])
-                beta_right = clff._first_order_thres(node_x[right_indice], node_y[right_indice])
+                beta_left = self._first_order(node_x[left_indice], node_y[left_indice])
+                beta_right = self._first_order(node_x[right_indice], node_y[right_indice])
                 deviation = len(left_indice) * np.linalg.norm(beta_parent - beta_left) + \
                         len(right_indice) * np.linalg.norm(beta_parent - beta_right)
                 if deviation > max_deviation:
@@ -422,7 +422,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        beta_parent = self._first_order_thres(node_x, node_y)
+        beta_parent = self._first_order(node_x, node_y)
         for feature_indice in self.split_features:
 
             current_feature = node_x[:, feature_indice]
@@ -450,8 +450,8 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
                 right_indice = sortted_indice[(i + 1):]
-                beta_left = clff._first_order_thres(node_x[left_indice], node_y[left_indice])
-                beta_right = clff._first_order_thres(node_x[right_indice], node_y[right_indice])
+                beta_left = self._first_order(node_x[left_indice], node_y[left_indice])
+                beta_right = self._first_order(node_x[right_indice], node_y[right_indice])
                 deviation = len(left_indice) * np.linalg.norm(beta_parent - beta_left) + \
                         len(right_indice) * np.linalg.norm(beta_parent - beta_right)
                 if deviation > max_deviation:
