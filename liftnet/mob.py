@@ -174,8 +174,8 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                                           "estimator":item["estimator"],
                                           "label": "Node " + str(item["node_id"]) + 
                                                 "\nMSE: " + str(np.round(item["impurity"], 3)) 
-                                                 + "\nSize = " + str(int(item["n_samples"]))
-                                                 + "\nMean = " + str(np.round(item["value"], 3))})
+                                                 + "\nSize: " + str(int(item["n_samples"]))
+                                                 + "\nMean: " + str(np.round(item["value"], 3))})
                 elif is_classifier(self):
                     draw_tree[item["node_id"]].update({"xy": xy, 
                                           "parent_xy": parent_xy,
@@ -190,7 +190,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                                            "parent_xy": parent_xy,
                                            "label":  "Node " + str(item["node_id"]) + 
                                                 "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3)) 
-                                                + "\nImpurity = " + str(np.round(item["impurity"], 3)) 
+                                                + "\nImpurity: " + str(np.round(item["impurity"], 3)) 
                                                 + "\nSize: " + str(int(item["n_samples"])) 
                                                 + "\nMean: " + str(np.round(item["value"], 3))})
                 elif is_classifier(self):
@@ -198,14 +198,14 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                                            "parent_xy": parent_xy,
                                            "label":  "Node " + str(item["node_id"]) + 
                                                 "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3)) 
-                                                + "\nCEntropy = " + str(np.round(item["impurity"], 3)) 
+                                                + "\nCEntropy: " + str(np.round(item["impurity"], 3)) 
                                                 + "\nSize: " + str(int(item["n_samples"])) 
                                                 + "\nMean: " + str(np.round(item["value"], 3))})
 
                 pending_node_list.append(self.tree[item["left_child_id"]])
                 pending_node_list.append(self.tree[item["right_child_id"]])
 
-        fig = plt.figure(figsize=(2 ** max_depth, max_depth * 2))
+        fig = plt.figure(figsize=(2 ** max_depth, (max_depth - 1) * 2))
         tree = fig.add_axes([0.0, 0.0, 1, 1])
         ax_width = tree.get_window_extent().width
         ax_height = tree.get_window_extent().height

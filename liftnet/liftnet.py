@@ -65,6 +65,11 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         if self.min_impurity_decrease < 0.:
             raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
 
+        if self.val_ratio <= 0:
+            raise ValueError("val_ratio must be > 0, got" % self.val_ratio)
+        elif self.val_ratio >= 1:
+            raise ValueError("val_ratio must be < 1, got %s." % self.val_ratio)
+
         if self.knot_dist not in ["uniform", "quantile"]:
             raise ValueError("method must be an element of [uniform, quantile], got %s." % self.knot_dist)
 
@@ -100,12 +105,6 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 
         if not isinstance(self.sim_update, bool):
             raise ValueError("sim_update must be boolean, got %s." % self.sim_update)
-        
-        if self.val_ratio <= 0:
-            raise ValueError("val_ratio must be > 0, got" % self.val_ratio)
-        elif self.val_ratio >= 1:
-            raise ValueError("val_ratio must be < 1, got %s." % self.val_ratio)
-
                 
     def visualize_leaves(self, cols_per_row=3, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
 
