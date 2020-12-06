@@ -288,12 +288,12 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         return pred
 
 
-class BaseMobRegressor(BaseMob, RegressorMixin):
+class BaseMOBRegressor(BaseMOB, RegressorMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, 
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
 
-        super(BaseMobRegressor, self).__init__(max_depth=max_depth,
+        super(BaseMOBRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
@@ -328,12 +328,12 @@ class BaseMobRegressor(BaseMob, RegressorMixin):
         return self.decision_function(x)
 
     
-class BaseMobClassifier(BaseMob, ClassifierMixin):
+class BaseMOBClassifier(BaseMOB, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
 
-        super(BaseMobClassifier, self).__init__(max_depth=max_depth,
+        super(BaseMOBClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,

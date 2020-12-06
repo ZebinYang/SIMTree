@@ -8,7 +8,7 @@ EPSILON = 1e-7
 __all__ = ["CARTRegressor", "CARTClassifier"]
 
 
-class CARTRegressor(BaseMobRegressor, RegressorMixin):
+class CARTRegressor(BaseMOBRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_features=None, val_ratio=0.2, random_state=0):
@@ -89,7 +89,7 @@ class CARTRegressor(BaseMobRegressor, RegressorMixin):
         return node
 
     
-class CARTClassifier(BaseMobClassifier, ClassifierMixin):
+class CARTClassifier(BaseMOBClassifier, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):

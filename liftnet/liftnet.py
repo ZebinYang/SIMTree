@@ -17,7 +17,7 @@ EPSILON = 1e-7
 __all__ = ["LIFTNetRegressor", "LIFTNetClassifier"]
 
 
-class BaseLIFTNet(BaseMob, metaclass=ABCMeta):
+class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
     """
         Base LIFTNet class for classification and regression.
      """
@@ -198,7 +198,7 @@ class BaseLIFTNet(BaseMob, metaclass=ABCMeta):
                 fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
 
 
-class LIFTNetRegressor(BaseLIFTNet, BaseMobRegressor, RegressorMixin):
+class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
                  knot_dist="quantile", degree=3, knot_num=5, nterms=5, reg_gamma=0.1,
@@ -322,7 +322,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMobRegressor, RegressorMixin):
         return node
     
     
-class LIFTNetClassifier(BaseLIFTNet, BaseMobClassifier, ClassifierMixin):
+class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
     
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
                  knot_dist="quantile", degree=3, knot_num=5, nterms=5, reg_gamma=0.1,
