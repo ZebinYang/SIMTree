@@ -21,7 +21,7 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
 
-        super(MobGLMRegressor, self).__init__(max_depth=max_depth,
+        super(MOBGLMRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
@@ -124,7 +124,7 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
 
-        super(MobGLMClassifier, self).__init__(max_depth=max_depth,
+        super(MOBGLMClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
