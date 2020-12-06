@@ -130,6 +130,10 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         self.inv_cov = np.linalg.pinv(self.cov)
         s1 = np.dot(self.inv_cov, (x - self.mu).T).T
         zbar = np.average(y.reshape(-1, 1) * s1, axis=0, weights=sample_weight)
+        if np.linalg.norm(zbar) > 0:
+            beta = zbar / np.linalg.norm(zbar)
+        else:
+            beta = zbar
         return beta.reshape([-1, 1])
             
     def visualize_leaves(self, cols_per_row=3, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
