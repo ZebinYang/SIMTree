@@ -129,7 +129,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         
         self.mu = np.average(x, axis=0, weights=sample_weight) 
         self.cov = np.cov(x.T, aweights=sample_weight)
-        self.inv_cov = np.linalg.pinv(self.cov)
+        self.inv_cov = np.linalg.pinv(self.cov, rcond=1e-3)
         s1 = np.dot(self.inv_cov, (x - self.mu).T).T
         zbar = np.average(y.reshape(-1, 1) * s1, axis=0, weights=sample_weight)
         if np.linalg.norm(zbar) > 0:
