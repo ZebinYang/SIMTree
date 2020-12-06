@@ -51,14 +51,6 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
             if self.max_depth < 0:
                 raise ValueError("degree must be >= 0, got" % self.max_depth)
    
-        if self.base_method not in ["sim", "glm", "constant"]:
-            raise ValueError("base_method must be an element of [sim, glm, constant], got %s." % 
-                         self.base_method)
-
-        if self.split_method not in ["sim", "glm", "constant"]:
-            raise ValueError("base_method must be an element of [sim, glm, constant], got %s." % 
-                         self.split_method)
-        
         if self.split_features is not None:
             if not isinstance(self.split_features, list):
                 raise ValueError("split_features must be an list or None, got %s." % 
