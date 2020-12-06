@@ -40,8 +40,8 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         """
 
         if isinstance(self.nterms, int):
-            if self.nterms < 0:
-                raise ValueError("nterms must be >= 0, got %s." % self.nterms)
+            if self.nterms <= 0:
+                raise ValueError("nterms must be >= 1, got %s." % self.nterms)
         else:
             raise ValueError("Invalid nterms.")
 
