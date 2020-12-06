@@ -190,7 +190,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                                            "parent_xy": parent_xy,
                                            "label":  "Node " + str(item["node_id"]) + 
                                                 "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3)) 
-                                                + "\nImpurity: " + str(np.round(item["impurity"], 3)) 
+                                                + "\nMSE: " + str(np.round(item["impurity"], 3)) 
                                                 + "\nSize: " + str(int(item["n_samples"])) 
                                                 + "\nMean: " + str(np.round(item["value"], 3))})
                 elif is_classifier(self):
