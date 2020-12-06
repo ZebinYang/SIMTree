@@ -243,7 +243,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
     def build_root(self):
         
-        root_clf = SimRegressor(nterms=0, reg_gamma=0, degree=self.degree,
+        root_clf = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
                         knot_dist=self.knot_dist, knot_num=self.knot_num,
                         random_state=self.random_state)
         root_clf.fit(self.x, self.y)
@@ -332,12 +332,12 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
             best_left_indice = sample_indice[sortted_indice[:best_position]]
             best_right_indice = sample_indice[sortted_indice[best_position:]]
 
-            left_clf = SimRegressor(nterms=n_features, reg_gamma=0, degree=self.degree,
+            left_clf = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
                              knot_dist=self.knot_dist, knot_num=self.knot_num,
                              random_state=self.random_state)
             left_clf.fit(self.x[best_left_indice], self.y[best_left_indice])
 
-            right_clf = SimRegressor(nterms=n_features, reg_gamma=0, degree=self.degree,
+            right_clf = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
                              knot_dist=self.knot_dist, knot_num=self.knot_num,
                              random_state=self.random_state)
             right_clf.fit(self.x[best_right_indice], self.y[best_right_indice])
@@ -373,7 +373,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
     def build_root(self):
         
-        root_clf = SimClassifier(nterms=0, reg_gamma=0, degree=self.degree,
+        root_clf = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
                          knot_dist=self.knot_dist, knot_num=self.knot_num,
                          random_state=self.random_state)
         root_clf.fit(self.x, self.y)
@@ -467,12 +467,12 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
             best_left_indice = sample_indice[sortted_indice[:best_position]]
             best_right_indice = sample_indice[sortted_indice[best_position:]]
 
-            left_clf = SimClassifier(nterms=n_features, reg_gamma=0, degree=self.degree,
+            left_clf = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
                              knot_dist=self.knot_dist, knot_num=self.knot_num,
                              random_state=self.random_state)
             left_clf.fit(self.x[best_left_indice], self.y[best_left_indice])
 
-            right_clf = SimClassifier(nterms=n_features, reg_gamma=0, degree=self.degree,
+            right_clf = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
                              knot_dist=self.knot_dist, knot_num=self.knot_num,
                              random_state=self.random_state)
             right_clf.fit(self.x[best_right_indice], self.y[best_right_indice])

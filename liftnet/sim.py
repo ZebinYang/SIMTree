@@ -34,36 +34,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         
         self.random_state = random_state
 
-    def _validate_hyperparameters(self):
-        
-        """method to validate model parameters
-        """
-
-        if isinstance(self.nterms, int):
-            if self.nterms <= 0:
-                raise ValueError("nterms must be >= 1, got %s." % self.nterms)
-        else:
-            raise ValueError("Invalid nterms.")
-
-        if (isinstance(self.reg_gamma, float)) or (isinstance(self.reg_gamma, int)):
-            if (self.reg_gamma < 0) or (self.reg_gamma > 1):
-                raise ValueError("reg_gamma must be >= 0 and <=1, got %s." % self.reg_gamma)
-        else:
-            raise ValueError("Invalid reg_gamma.")
-
-        if not isinstance(self.degree, int):
-            raise ValueError("degree must be an integer, got %s." % self.degree)
-        elif self.degree < 0:
-            raise ValueError("degree must be >= 0, got %s." % self.degree)
-        
-        if not isinstance(self.knot_num, int):
-            raise ValueError("knot_num must be an integer, got %s." % self.knot_num)
-        elif self.knot_num <= 0:
-            raise ValueError("knot_num must be > 0, got %s." % self.knot_num)
-
-        if self.knot_dist not in ["uniform", "quantile"]:
-            raise ValueError("method must be an element of [uniform, quantile], got %s." % self.knot_dist)
-
     def _validate_sample_weight(self, n_samples, sample_weight):
         
         """method to validate sample weight 
@@ -136,6 +106,8 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         self._validate_hyperparameters()
         x, y = self._validate_input(x, y)
         n_samples, n_features = x.shape
+        if self.nterms is None:
+            self.nterms = n_features
         if sample_weight is None:
             sample_weight = np.ones(n_samples) / n_samples
         else:
