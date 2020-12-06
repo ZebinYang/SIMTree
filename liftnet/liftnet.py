@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.base import RegressorMixin, ClassifierMixin
 
 from .sim import SimRegressor, SimClassifier
-from .mob import BaseMobRegressor, BaseMobClassifier
+from .mob import BaseMOBRegressor, BaseMOBClassifier
 
 from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning

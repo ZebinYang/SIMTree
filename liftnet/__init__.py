@@ -3,7 +3,7 @@ from .mobglm import *
 from .liftnet import *
 
 __all__ = ["CARTRegressor", "CARTClassifier", 
-        "MobGLMRegressor", "MobGLMClassifier", 
+        "MOBGLMRegressor", "MOBGLMClassifier", 
         "LIFTNetRegressor", "LIFTNetClassifier"]
 
 __version__ = '1.0.0'

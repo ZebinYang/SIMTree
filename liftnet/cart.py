@@ -2,7 +2,7 @@ import numpy as np
 from abc import ABCMeta, abstractmethod
 
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
-from .mob import BaseMobRegressor, BaseMobClassifier
+from .mob import BaseMOBRegressor, BaseMOBClassifier
 
 EPSILON = 1e-7
 __all__ = ["CARTRegressor", "CARTClassifier"]

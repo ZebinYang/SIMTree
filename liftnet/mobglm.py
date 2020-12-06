@@ -6,7 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge, LinearRegression, LogisticRegression
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
 
-from .mob import BaseMobRegressor, BaseMobClassifier
+from .mob import BaseMOBRegressor, BaseMOBClassifier
 
 from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning
