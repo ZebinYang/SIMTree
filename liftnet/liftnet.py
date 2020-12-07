@@ -379,6 +379,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
             if feature_range < EPSILON:
                 continue
 
+            pos = 1
             max_deviation = 0
             split_point = 0
             for i, _ in enumerate(sortted_indice):
