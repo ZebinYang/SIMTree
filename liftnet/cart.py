@@ -1,7 +1,5 @@
 import numpy as np
-from abc import ABCMeta, abstractmethod
-
-from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
+from sklearn.base import RegressorMixin, ClassifierMixin
 from .mob import BaseMOBRegressor, BaseMOBClassifier
 
 EPSILON = 1e-7
@@ -27,14 +25,14 @@ class CARTRegressor(BaseMOBRegressor, RegressorMixin):
         return root_impurity
 
     def build_leaf(self, sample_indice):
-        
+
         best_estimator = None
         predict_func = lambda x: np.mean(self.y[sample_indice])
         best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         return predict_func, best_estimator, best_impurity
-    
+
     def node_split(self, sample_indice):
-        
+
         node_x = self.x[sample_indice]
         node_y = self.y[sample_indice]
         n_samples, n_features = node_x.shape
@@ -84,13 +82,13 @@ class CARTRegressor(BaseMOBRegressor, RegressorMixin):
         best_right_indice = sample_indice[sortted_indice[best_position:]]
         best_left_impurity = node_y[sortted_indice[:best_position]].var()
         best_right_impurity = node_y[sortted_indice[best_position:]].var()
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
-              "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
+        node = {"feature": best_feature, "threshold": best_threshold, "left": best_left_indice, "right": best_right_indice,
+              "impurity": best_impurity, "left_impurity": best_left_impurity, "right_impurity": best_right_impurity}
         return node
 
-    
+
 class CARTClassifier(BaseMOBClassifier, ClassifierMixin):
-    
+
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
 
@@ -105,18 +103,18 @@ class CARTClassifier(BaseMOBClassifier, ClassifierMixin):
     def build_root(self):
 
         p = self.y.mean()
-        root_impurity = - p * np.log2(p) - (1 - p) * np.log2((1 - p)) if (p > 0) and (p < 1) else 0 
+        root_impurity = - p * np.log2(p) - (1 - p) * np.log2((1 - p)) if (p > 0) and (p < 1) else 0
         return root_impurity
 
     def build_leaf(self, sample_indice):
-        
+
         best_estimator = None
         predict_func = lambda x: np.mean(self.y[sample_indice])
         best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         return predict_func, best_estimator, best_impurity
-    
+
     def node_split(self, sample_indice):
-        
+
         node_x = self.x[sample_indice]
         node_y = self.y[sample_indice]
         n_samples, n_features = node_x.shape
@@ -154,7 +152,7 @@ class CARTClassifier(BaseMOBClassifier, ClassifierMixin):
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
 
-                left_impurity = 0 
+                left_impurity = 0
                 right_impurity = 0
                 pleft = sum_left / n_left
                 pright = (sum_total - sum_left) / n_right
@@ -174,11 +172,11 @@ class CARTClassifier(BaseMOBClassifier, ClassifierMixin):
             sortted_indice = np.argsort(node_x[:, best_feature])
             best_left_indice = sample_indice[sortted_indice[:best_position]]
             best_right_indice = sample_indice[sortted_indice[best_position:]]
-            
+
             pleft = node_y[sortted_indice[:best_position]].mean()
             pright = node_y[sortted_indice[best_position:]].mean()
-            best_left_impurity = - pleft * np.log2(pleft) - (1 - pleft) * np.log2((1 - pleft)) if (pleft > 0) and (pleft < 1) else 0 
-            best_right_impurity = - pright * np.log2(pright) - (1 - pright) * np.log2((1 - pright)) if (pright > 0) and (pright < 1) else 0 
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
-             "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
+            best_left_impurity = - pleft * np.log2(pleft) - (1 - pleft) * np.log2((1 - pleft)) if (pleft > 0) and (pleft < 1) else 0
+            best_right_impurity = - pright * np.log2(pright) - (1 - pright) * np.log2((1 - pright)) if (pright > 0) and (pright < 1) else 0
+        node = {"feature": best_feature, "threshold": best_threshold, "left": best_left_indice, "right": best_right_indice,
+             "impurity": best_impurity, "left_impurity": best_left_impurity, "right_impurity": best_right_impurity}
         return node

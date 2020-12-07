@@ -9,6 +9,7 @@ from sklearn.utils import check_X_y, column_or_1d
 from sklearn.utils.validation import check_is_fitted
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin, is_classifier, is_regressor
 
+EPSILON = 1e-7
 __all__ = ["BaseMOBRegressor", "BaseMOBClassifier"]
 
 
@@ -26,7 +27,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         self.split_features = split_features
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
-        
+
         self.val_ratio = val_ratio
         self.random_state = random_state
 
@@ -37,12 +38,12 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
 
             if self.max_depth < 0:
                 raise ValueError("degree must be >= 0, got" % self.max_depth)
-   
+
         if self.split_features is not None:
             if not isinstance(self.split_features, list):
-                raise ValueError("split_features must be an list or None, got %s." % 
+                raise ValueError("split_features must be an list or None, got %s." %
                          self.split_features)
-                
+
         if not isinstance(self.min_samples_leaf, int):
             raise ValueError("min_samples_leaf must be an integer, got %s." % self.min_samples_leaf)
 
@@ -60,11 +61,11 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
     @abstractmethod
     def build_root(self):
         pass
-    
+
     @abstractmethod
     def build_leaf(self, sample_indice):
         pass
-    
+
     def add_node(self, parent_id, is_left, is_leaf, depth, feature, threshold, impurity, sample_indice):
 
         self.node_count += 1
@@ -78,17 +79,17 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         n_samples = len(sample_indice)
         if is_leaf:
             predict_func, estimator, best_impurity = self.build_leaf(sample_indice)
-            node = {"node_id":node_id, "parent_id":parent_id, "depth":depth, "feature":feature, "impurity":best_impurity,
-                  "n_samples": n_samples, "is_left":is_left, "is_leaf":is_leaf, "value":np.mean(self.y[sample_indice]),
-                  "predict_func":predict_func, "estimator":estimator}
-            self.leaf_estimators_.update({node_id:estimator})
+            node = {"node_id": node_id, "parent_id": parent_id, "depth": depth, "feature": feature, "impurity": best_impurity,
+                  "n_samples": n_samples, "is_left": is_left, "is_leaf": is_leaf, "value": np.mean(self.y[sample_indice]),
+                  "predict_func": predict_func, "estimator":estimator}
+            self.leaf_estimators_.update({node_id: estimator})
         else:
-            node = {"node_id":node_id, "parent_id":parent_id, "depth":depth,"feature":feature, "impurity":impurity,
-                  "n_samples": n_samples, "is_left":is_left, "is_leaf":is_leaf, "value":np.mean(self.y[sample_indice]),
-                  "left_child_id":None, "right_child_id":None, "threshold":threshold}            
-        self.tree.update({node_id:node})
+            node = {"node_id": node_id, "parent_id": parent_id, "depth": depth,"feature": feature, "impurity": impurity,
+                  "n_samples": n_samples, "is_left": is_left, "is_leaf": is_leaf, "value": np.mean(self.y[sample_indice]),
+                  "left_child_id":None, "right_child_id": None, "threshold": threshold}            
+        self.tree.update({node_id: node})
         return node_id
-    
+
     def fit(self, x, y):
 
         self.tree = {}
@@ -100,14 +101,14 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         sample_indice = np.arange(n_samples)
         if self.split_features is None:
             self.split_features = np.arange(n_features).tolist()
-        
+
         np.random.seed(self.random_state)
         root_impurity = self.build_root()
         root_node = {"sample_indice": sample_indice,
-                 "parent_id":None,
+                 "parent_id": None,
                  "depth": 0,
-                 "impurity":root_impurity,
-                 "is_left":False}
+                 "impurity": root_impurity,
+                 "is_left": False}
         pending_node_list = [root_node]
         while len(pending_node_list) > 0:
             stack_record = pending_node_list.pop()
@@ -129,24 +130,24 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                 impurity_improvement = impurity - split["impurity"]
                 is_leaf = (is_leaf or (impurity_improvement < self.min_impurity_decrease) or
                         (split["left"] is None) or (split["right"] is None))
-              
+
             if is_leaf:
-                node_id = self.add_node(parent_id, is_left, is_leaf, depth, 
+                node_id = self.add_node(parent_id, is_left, is_leaf, depth,
                                 None, None, impurity, sample_indice)
             else:
-                node_id = self.add_node(parent_id, is_left, is_leaf, depth, 
+                node_id = self.add_node(parent_id, is_left, is_leaf, depth,
                                 split["feature"], split["threshold"], impurity, sample_indice)
 
-                pending_node_list.append({"sample_indice":split["left"],
-                                 "parent_id":node_id,
-                                 "depth":depth + 1,
-                                 "impurity":split["left_impurity"],
-                                 "is_left":True})
-                pending_node_list.append({"sample_indice":split["right"],
-                                 "parent_id":node_id,
+                pending_node_list.append({"sample_indice": split["left"],
+                                 "parent_id": node_id,
                                  "depth": depth + 1,
-                                 "impurity":split["right_impurity"],
-                                 "is_left":False})
+                                 "impurity": split["left_impurity"],
+                                 "is_left": True})
+                pending_node_list.append({"sample_indice": split["right"],
+                                 "parent_id": node_id,
+                                 "depth": depth + 1,
+                                 "impurity": split["right_impurity"],
+                                 "is_left": False})
         return self
 
     def plot_tree(self, folder="./results/", name="demo", save_png=False, save_eps=False):
@@ -169,37 +170,37 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
 
             if item["is_leaf"]:
                 if is_regressor(self):
-                    draw_tree[item["node_id"]].update({"xy": xy, 
+                    draw_tree[item["node_id"]].update({"xy": xy,
                                           "parent_xy": parent_xy,
-                                          "estimator":item["estimator"],
-                                          "label": "Node " + str(item["node_id"]) + 
-                                                "\nMSE: " + str(np.round(item["impurity"], 3)) 
+                                          "estimator": item["estimator"],
+                                          "label": "_____  Node " + str(item["node_id"]) + " ________" +
+                                                "\nMSE: " + str(np.round(item["impurity"], 3))
                                                  + "\nSize: " + str(int(item["n_samples"]))
                                                  + "\nMean: " + str(np.round(item["value"], 3))})
                 elif is_classifier(self):
-                    draw_tree[item["node_id"]].update({"xy": xy, 
+                    draw_tree[item["node_id"]].update({"xy": xy,
                                           "parent_xy": parent_xy,
-                                          "estimator":item["estimator"],
-                                          "label": "Node " + str(item["node_id"]) + 
-                                                "\nCEntropy: " + str(np.round(item["impurity"], 3)) 
+                                          "estimator": item["estimator"],
+                                          "label": "  Node " + str(item["node_id"]) + "  " +
+                                                "\nCEntropy: " + str(np.round(item["impurity"], 3))
                                                  + "\nSize: " + str(int(item["n_samples"]))
                                                  + "\nMean: " + str(np.round(item["value"], 3))})
             else:
                 if is_regressor(self):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
-                                           "label":  "Node " + str(item["node_id"]) + 
-                                                "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3)) 
-                                                + "\nMSE: " + str(np.round(item["impurity"], 3)) 
-                                                + "\nSize: " + str(int(item["n_samples"])) 
+                                           "label": "  Node " + str(item["node_id"]) + "  " +
+                                                "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3))
+                                                + "\nMSE: " + str(np.round(item["impurity"], 3))
+                                                + "\nSize: " + str(int(item["n_samples"]))
                                                 + "\nMean: " + str(np.round(item["value"], 3))})
                 elif is_classifier(self):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
-                                           "label":  "Node " + str(item["node_id"]) + 
-                                                "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3)) 
-                                                + "\nCEntropy: " + str(np.round(item["impurity"], 3)) 
-                                                + "\nSize: " + str(int(item["n_samples"])) 
+                                           "label": "  Node " + str(item["node_id"]) + "  " +
+                                                "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3))
+                                                + "\nCEntropy: " + str(np.round(item["impurity"], 3))
+                                                + "\nSize: " + str(int(item["n_samples"]))
                                                 + "\nMean: " + str(np.round(item["value"], 3))})
 
                 pending_node_list.append(self.tree[item["left_child_id"]])
@@ -221,7 +222,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
             else:
                 alpha = (item["value"] - min_value) / (max_value - min_value)
                 color = [int(round(alpha * c + (1 - alpha) * 255, 0)) for c in color_list]
-            kwargs = dict(bbox={"fc": '#%2x%2x%2x' % tuple(color), "boxstyle": "round"}, arrowprops={"arrowstyle":"<-"}, 
+            kwargs = dict(bbox={"fc": '#%2x%2x%2x' % tuple(color), "boxstyle": "round"}, arrowprops={"arrowstyle": "<-"},
                           ha='center', va='center', zorder=100 - 10 * item["depth"], xycoords='axes pixels', fontsize=14)
 
             if item["parent_id"] is None:
@@ -267,9 +268,9 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         return path_all
 
     def decision_function(self, x):
-        
+
         check_is_fitted(self, "tree")
-            
+
         leaf_idx = []
         for row in x:
             node = self.tree[1]
@@ -279,7 +280,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                 else:
                     node = self.tree[node['right_child_id']]
             leaf_idx.append(node['node_id'])
-        
+
         n_samples = x.shape[0]
         pred = np.zeros((n_samples))
         for node_id in np.unique(leaf_idx):
@@ -289,8 +290,8 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
 
 
 class BaseMOBRegressor(BaseMOB, RegressorMixin):
-    
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, 
+
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
 
         super(BaseMOBRegressor, self).__init__(max_depth=max_depth,
@@ -305,11 +306,11 @@ class BaseMOBRegressor(BaseMOB, RegressorMixin):
         x, y = check_X_y(x, y, accept_sparse=["csr", "csc", "coo"],
                          multi_output=True, y_numeric=True)
         return x, y.ravel()
-    
+
     def get_loss(self, label, pred):
-          
+
         """method to calculate the MSE loss
-        
+
         Parameters
         ---------
         label : array-like of shape (n_samples,)
@@ -318,18 +319,18 @@ class BaseMOBRegressor(BaseMOB, RegressorMixin):
             containing the output dataset
         Returns
         -------
-        float 
+        float
             the MSE loss
         """
         loss = np.average((label - pred) ** 2, axis=0)
         return loss
-    
+
     def predict(self, x):
         return self.decision_function(x)
 
     
 class BaseMOBClassifier(BaseMOB, ClassifierMixin):
-    
+
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
 
@@ -355,9 +356,9 @@ class BaseMOBClassifier(BaseMOB, ClassifierMixin):
         return x, y.ravel()
 
     def get_loss(self, label, pred):
-        
+
         """method to calculate the cross entropy loss
-        
+
         Parameters
         ---------
         label : array-like of shape (n_samples,)

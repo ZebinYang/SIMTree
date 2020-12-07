@@ -1,9 +1,9 @@
-from .cart import *
-from .mobglm import *
-from .liftnet import *
+from .cart import CARTRegressor, CARTClassifier
+from .mobglm import MOBGLMRegressor, MOBGLMClassifier
+from .liftnet import LIFTNetRegressor, LIFTNetClassifier
 
-__all__ = ["CARTRegressor", "CARTClassifier", 
-        "MOBGLMRegressor", "MOBGLMClassifier", 
+__all__ = ["CARTRegressor", "CARTClassifier",
+        "MOBGLMRegressor", "MOBGLMClassifier",
         "LIFTNetRegressor", "LIFTNetClassifier"]
 
 __version__ = '1.0.0'

@@ -1,10 +1,7 @@
 import numpy as np
-import pandas as pd
-from abc import ABCMeta, abstractmethod
-
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import Ridge, LinearRegression, LogisticRegression
-from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
+from sklearn.base import RegressorMixin, ClassifierMixin
 
 from .mob import BaseMOBRegressor, BaseMOBClassifier
 
@@ -13,11 +10,11 @@ from sklearn.exceptions import ConvergenceWarning
 simplefilter("ignore", category=ConvergenceWarning)
 
 EPSILON = 1e-7
-__all__ = ["MOBGLMRegressor", "MOBGLMRegressor"]
+__all__ = ["MOBGLMRegressor", "MOBGLMClassifier"]
 
 
 class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
-    
+
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
 
@@ -30,14 +27,14 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
                                  random_state=random_state)
 
     def build_root(self):
-        
+
         root_clf = LinearRegression()
         root_clf.fit(self.x, self.y)
         root_impurity = self.get_loss(self.y, root_clf.predict(self.x))
         return root_impurity
 
     def build_leaf(self, sample_indice):
-        
+
         best_estimator = None
         best_impurity = np.inf
         idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
@@ -51,9 +48,9 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
         return predict_func, best_estimator, best_impurity
-    
+
     def node_split(self, sample_indice):
-        
+
         node_x = self.x[sample_indice]
         node_y = self.y[sample_indice]
         n_samples, n_features = node_x.shape
@@ -83,7 +80,7 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
 
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
-                
+
                 if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
                     continue
 
@@ -114,13 +111,13 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
             sortted_indice = np.argsort(node_x[:, best_feature])
             best_left_indice = sample_indice[sortted_indice[:best_position]]
             best_right_indice = sample_indice[sortted_indice[best_position:]]
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
-              "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
+        node = {"feature": best_feature, "threshold": best_threshold, "left": best_left_indice, "right": best_right_indice,
+              "impurity": best_impurity, "left_impurity": best_left_impurity, "right_impurity": best_right_impurity}
         return node
 
-    
+
 class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
-    
+
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
 
@@ -131,17 +128,19 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
                                  split_features=split_features,
                                  val_ratio=val_ratio,
                                  random_state=random_state)
+
     def build_root(self):
-        
+
+        root_clf = LogisticRegression(penalty='none', random_state=self.random_state)
         root_clf.fit(self.x, self.y.ravel())
         root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
         return root_impurity
 
     def build_leaf(self, sample_indice):
-        
+
         best_estimator = None
         idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-        if (self.y[sample_indice].std() == 0) | (self.y[idx1].std() == 0)| (self.y[idx2].std() == 0):
+        if (self.y[sample_indice].std() == 0) | (self.y[idx1].std() == 0) | (self.y[idx2].std() == 0):
             best_impurity = 0
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
@@ -157,9 +156,9 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
             predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
             best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity
-    
+
     def node_split(self, sample_indice):
-        
+
         node_x = self.x[sample_indice]
         node_y = self.y[sample_indice]
         n_samples, n_features = node_x.shape
@@ -189,7 +188,7 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
 
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
-                
+
                 if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
                     continue
 
@@ -226,6 +225,6 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
             sortted_indice = np.argsort(node_x[:, best_feature])
             best_left_indice = sample_indice[sortted_indice[:best_position]]
             best_right_indice = sample_indice[sortted_indice[best_position:]]
-        node = {"feature":best_feature, "threshold":best_threshold, "left":best_left_indice, "right":best_right_indice,
-              "impurity":best_impurity, "left_impurity":best_left_impurity, "right_impurity":best_right_impurity}
+        node = {"feature": best_feature, "threshold": best_threshold, "left": best_left_indice, "right": best_right_indice,
+              "impurity": best_impurity, "left_impurity": best_left_impurity, "right_impurity": best_right_impurity}
         return node

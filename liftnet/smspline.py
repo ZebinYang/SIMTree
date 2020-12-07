@@ -7,8 +7,8 @@ from abc import ABCMeta, abstractmethod
 from sklearn.utils.extmath import softmax
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.utils.validation import check_is_fitted
-from sklearn.utils import check_array, check_X_y
-from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin
+from sklearn.utils import check_X_y
+from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin, is_classifier, is_regressor
 
 import rpy2
 from rpy2 import robjects as ro
@@ -33,21 +33,19 @@ __all__ = ["SMSplineRegressor", "SMSplineClassifier"]
 
 class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
-
     @abstractmethod
-    def __init__(self, knot_num=10, knot_dist="quantile", degree=3, reg_gamma=0.1, xmin=-1, xmax=1):
+    def __init__(self, knot_num=10, degree=3, reg_gamma=0.1, xmin=-1, xmax=1):
 
         self.knot_num = knot_num
-        self.knot_dist = knot_dist
         self.degree = degree
         self.reg_gamma = reg_gamma
         self.xmin = xmin
         self.xmax = xmax
 
     def _estimate_density(self, x):
-                
+
         """method to estimate the density of input data
-        
+
         Parameters
         ---------
         x : array-like of shape (n_samples, n_features)
@@ -56,36 +54,8 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
         self.density_, self.bins_ = np.histogram(x, bins=10, density=True)
 
-    def _validate_hyperparameters(self):
-        
-        """method to validate model parameters
-        """
-
-        if not isinstance(self.knot_num, int):
-            raise ValueError("knot_num must be an integer, got %s." % self.knot_num)
-        
-        if self.knot_num <= 0:
-            raise ValueError("knot_num must be > 0, got %s." % self.knot_num)
-
-        if self.knot_dist not in ["uniform", "quantile"]:
-            raise ValueError("method must be an element of [uniform, quantile], got %s." % self.knot_dist)
-
-        if not isinstance(self.degree, int):
-            raise ValueError("degree must be an integer, got %s." % self.degree)
-        elif self.degree not in [1, 3]:
-            raise ValueError("degree must be 1 or 3, got %s." % self.degree)
-
-        if not isinstance(self.reg_gamma, str):
-            if (self.reg_gamma < 0) or (self.reg_gamma > 1):
-                raise ValueError("reg_gamma must be GCV or >= 0 and <1, got %s" % self.reg_gamma)
-        elif self.reg_gamma not in ["GCV"]:
-            raise ValueError("reg_gamma must be GCV or >= 0 and <1, got %s." % self.reg_gamma)
-
-        if self.xmin > self.xmax:
-            raise ValueError("xmin must be <= xmax, got %s and %s." % (self.xmin, self.xmax))
-
     def diff(self, x, order=1):
-             
+
         """method to calculate derivatives of the fitted adaptive spline to the input
 
         Parameters
@@ -95,7 +65,7 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
         order : int
             order of derivative
         """
-        
+
         if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
             derivative = np.zeros((x.shape[0], 1))
         else:
@@ -116,15 +86,15 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
         fig = plt.figure(figsize=(6, 4))
         inner = gridspec.GridSpec(2, 1, hspace=0.1, height_ratios=[6, 1])
-        ax1_main = plt.Subplot(fig, inner[0]) 
+        ax1_main = plt.Subplot(fig, inner[0])
         xgrid = np.linspace(self.xmin, self.xmax, 100).reshape([-1, 1])
         ygrid = self.decision_function(xgrid)
         ax1_main.plot(xgrid, ygrid)
         ax1_main.set_xticklabels([])
         ax1_main.set_title("Shape Function", fontsize=12)
         fig.add_subplot(ax1_main)
-        
-        ax1_density = plt.Subplot(fig, inner[1]) 
+
+        ax1_density = plt.Subplot(fig, inner[1])
         xint = ((np.array(self.bins_[1:]) + np.array(self.bins_[:-1])) / 2).reshape([-1, 1]).reshape([-1])
         ax1_density.bar(xint, self.density_, width=xint[1] - xint[0])
         ax1_main.get_shared_x_axes().join(ax1_main, ax1_density)
@@ -136,7 +106,7 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
     def decision_function(self, x):
 
         """output f(x) for given samples
-        
+
         Parameters
         ---------
         x : array-like of shape (n_samples, 1)
@@ -144,7 +114,7 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
         Returns
         -------
         np.array of shape (n_samples,)
-            containing f(x) 
+            containing f(x)
         """
 
         check_is_fitted(self, "sm_")
@@ -154,10 +124,10 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
         if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
             pred = self.sm_ * np.ones(x.shape[0])
         else:
-            if "family" in self.sm_.names:
+            if is_classifier(self):
                 pred = bigsplines.predict_bigssg(self.sm_, ro.r("data.frame")(x=x))[1]
-            if "family" not in self.sm_.names:
-                pred = bigsplines.predict_bigssa(self.sm_, ro.r("data.frame")(x=x))
+            if is_regressor(self):
+                pred = bigsplines.predict_bigspline(self.sm_, ro.r("data.frame")(x=x))
         return pred
 
 
@@ -168,36 +138,28 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
     Details:
     1. This is an API for the well-known R package `bigsplines`, and we call the function bigssa through rpy2 interface.
     2. During prediction, the data which is outside of the given `xmin` and `xmax` will be clipped to the boundary.
-    
+
     Parameters
     ----------
     knot_num : int, optional. default=10
            the number of knots
-
-    knot_dist : str, optional. default="quantile"
-            the distribution of knots
-      
-        "uniform": uniformly over the domain
-
-        "quantile": uniform quantiles of the given input data
 
     degree : int, optional. default=3
           the order of the spline, possible values include 1 and 3
 
     reg_gamma : float, optional. default=0.1
             the roughness penalty strength of the spline algorithm, range from 0 to 1; it can also be set to "GCV".
-    
+
     xmin : float, optional. default=-1
         the min boundary of the input
-    
+
     xmax : float, optional. default=1
         the max boundary of the input
     """
 
-    def __init__(self, knot_num=10, knot_dist="quantile", degree=3, reg_gamma=0.1, xmin=-1, xmax=1):
+    def __init__(self, knot_num=10, degree=3, reg_gamma=0.1, xmin=-1, xmax=1):
 
         super(SMSplineRegressor, self).__init__(knot_num=knot_num,
-                                  knot_dist=knot_dist,
                                   degree=degree,
                                   reg_gamma=reg_gamma,
                                   xmin=xmin,
@@ -206,7 +168,7 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
     def _validate_input(self, x, y):
 
         """method to validate data
-        
+
         Parameters
         ---------
         x : array-like of shape (n_samples, 1)
@@ -219,28 +181,26 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
                          multi_output=True, y_numeric=True)
         return x, y.ravel()
 
-    def get_loss(self, label, pred, sample_weight=None):
-        
+    def get_loss(self, label, pred):
+
         """method to calculate the cross entropy loss
-        
+
         Parameters
         ---------
         label : array-like of shape (n_samples,)
             containing the input dataset
         pred : array-like of shape (n_samples,)
             containing the output dataset
-        sample_weight : array-like of shape (n_samples,), optional
-            containing sample weights
         Returns
         -------
         float
             the cross entropy loss
         """
 
-        loss = np.average((label - pred) ** 2, axis=0, weights=sample_weight)
+        loss = np.average((label - pred) ** 2, axis=0)
         return loss
 
-    def fit(self, x, y, sample_weight=None):
+    def fit(self, x, y):
 
         """fit the smoothing spline
 
@@ -250,51 +210,32 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
             containing the input dataset
         y : array-like of shape (n_samples,)
             containing target values
-        sample_weight : array-like of shape (n_samples,), optional
-            containing sample weights
         Returns
         -------
-        object 
+        object
             self : Estimator instance.
         """
 
-        self._validate_hyperparameters()
         x, y = self._validate_input(x, y)
         self._estimate_density(x)
-
-        n_samples = x.shape[0]
-        if sample_weight is None:
-            sample_weight = np.ones(n_samples)
-        else:
-            sample_weight = np.round(sample_weight / np.sum(sample_weight) * n_samples, 4)
-        
-        # The minimal value of sample weight in bigsplines is 0.005.
-        sample_weight[sample_weight <= 0.005] = 0.0051
-        if self.knot_dist == "uniform":
-            knots = list(np.linspace(self.xmin, self.xmax, self.knot_num + 2, dtype=np.float32))[1:-1]
-            knot_idx = [(np.abs(x - i)).argmin() + 1 for i in knots]
-        elif self.knot_dist == "quantile":
-            knots = np.quantile(x, list(np.linspace(0, 1, self.knot_num + 2, dtype=np.float32)))[1:-1]
-            knot_idx = [(np.abs(x - i)).argmin() + 1 for i in knots]
 
         unique_num = len(np.unique(x.round(decimals=6)))
         if unique_num <= 1:
             self.sm_ = np.mean(y)
         else:
-            kwargs = {"formula": Formula('y ~ x'),
-                   "nknots": knot_idx, 
-                   "lambdas": ro.r("NULL") if self.reg_gamma == "GCV" else self.reg_gamma,
-                   "rparm": 1e-2,
+            kwargs = {"x": x.ravel(),
+                   "y": y.ravel(),
+                   "nknots": self.knot_num,
                    "type": "lin" if self.degree==1 else "cub",
-                   "data": pd.DataFrame({"x":x.ravel(), "y":y.ravel()}),
-                   "weights": pd.DataFrame({"w":sample_weight})["w"]}
-            self.sm_ = bigsplines.bigssa(**kwargs)
+                   "lambdas": self.reg_gamma,
+                   "rparm": 0.01}
+            self.sm_ = bigsplines.bigspline(**kwargs)
         return self
 
     def predict(self, x):
 
         """output f(x) for given samples
-        
+
         Parameters
         ---------
         x : array-like of shape (n_samples, 1)
@@ -302,12 +243,12 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
         Returns
         -------
         np.array of shape (n_samples,)
-            containing f(x) 
+            containing f(x)
         """
 
         pred = self.decision_function(x)
         return pred
-    
+
 
 class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
 
@@ -323,47 +264,37 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
     knot_num : int, optional. default=10
            the number of knots
 
-    knot_dist : str, optional. default="quantile"
-            the distribution of knots
-      
-        "uniform": uniformly over the domain
-
-        "quantile": uniform quantiles of the given input data
-
     degree : int, optional. default=3
           the order of the spline, possible values include 1 and 3
 
     reg_gamma : float, optional. default=0.1
             the roughness penalty strength of the spline algorithm, range from 0 to 1; it can also be set to "GCV".
-    
+
     xmin : float, optional. default=-1
         the min boundary of the input
-    
+
     xmax : float, optional. default=1
         the max boundary of the input
     """
 
-    def __init__(self, knot_num=10, knot_dist="quantile", degree=3, reg_gamma=0.1, xmin=-1, xmax=1):
+    def __init__(self, knot_num=10, degree=3, reg_gamma=0.1, xmin=-1, xmax=1):
 
         super(SMSplineClassifier, self).__init__(knot_num=knot_num,
-                                  knot_dist=knot_dist,
                                   degree=degree,
                                   reg_gamma=reg_gamma,
                                   xmin=xmin,
                                   xmax=xmax)
 
-    def get_loss(self, label, pred, sample_weight=None):
-        
+    def get_loss(self, label, pred):
+
         """method to calculate the cross entropy loss
-        
+
         Parameters
         ---------
         label : array-like of shape (n_samples,)
             containing the input dataset
         pred : array-like of shape (n_samples,)
             containing the output dataset
-        sample_weight : array-like of shape (n_samples,), optional
-            containing sample weights
         Returns
         -------
         float
@@ -372,14 +303,13 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
 
         with np.errstate(divide="ignore", over="ignore"):
             pred = np.clip(pred, EPSILON, 1. - EPSILON)
-            loss = - np.average(label * np.log(pred) + (1 - label) * np.log(1 - pred),
-                                axis=0, weights=sample_weight)
+            loss = - np.average(label * np.log(pred) + (1 - label) * np.log(1 - pred), axis=0)
         return loss
-       
+
     def _validate_input(self, x, y):
 
         """method to validate data
-        
+
         Parameters
         ---------
         x : array-like of shape (n_samples, 1)
@@ -397,7 +327,7 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
         y = self._label_binarizer.transform(y) * 1.0
         return x, y.ravel()
 
-    def fit(self, x, y, sample_weight=None):
+    def fit(self, x, y):
 
         """fit the smoothing spline
 
@@ -407,31 +337,14 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
             containing the input dataset
         y : array-like of shape (n_samples,)
             containing target values
-        sample_weight : array-like of shape (n_samples,), optional
-            containing sample weights
         Returns
         -------
-        object 
+        object
             self : Estimator instance.
         """
 
-        self._validate_hyperparameters()
         x, y = self._validate_input(x, y)
         self._estimate_density(x)
-        n_samples = x.shape[0]
-        if sample_weight is None:
-            sample_weight = np.ones(n_samples)
-        else:
-            sample_weight = np.round(sample_weight / np.sum(sample_weight) * n_samples, 4)
-        
-        # The minimal value of sample weight in bigsplines is 0.005.
-        sample_weight[sample_weight <= 0.005] = 0.0051
-        if self.knot_dist == "uniform":
-            knots = list(np.linspace(self.xmin, self.xmax, self.knot_num + 2, dtype=np.float32))[1:-1]
-            knot_idx = [(np.abs(x - i)).argmin() + 1 for i in knots]
-        elif self.knot_dist == "quantile":
-            knots = np.quantile(x, list(np.linspace(0, 1, self.knot_num + 2, dtype=np.float32)))[1:-1]
-            knot_idx = [(np.abs(x - i)).argmin() + 1 for i in knots]
 
         unique_num = len(np.unique(x.round(decimals=6)))
         if unique_num <= 1:
@@ -442,18 +355,13 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
             exit = False
             while not exit:
                 try:
-                    if not isinstance(self.reg_gamma, str):
-                        if self.reg_gamma > 1:
-                            break
-                        
                     kwargs = {"formula": Formula('y ~ x'),
                            "family": "binomial",
-                           "nknots": knot_idx, 
-                           "lambdas": ro.r("NULL") if self.reg_gamma == "GCV" else self.reg_gamma,
-                           "rparm": 1e-2,
+                           "nknots": self.knot_num, 
+                           "lambdas": self.reg_gamma,
+                           "rparm": 0.01,
                            "type": "lin" if self.degree==1 else "cub",
-                           "data": pd.DataFrame({"x":x.ravel(), "y":y.ravel()}),
-                           "weights": pd.DataFrame({"w":sample_weight})["w"]}
+                           "data": pd.DataFrame({"x": x.ravel(), "y": y.ravel()})}
                     self.sm_ = bigsplines.bigssg(**kwargs)
                     exit = True
                 except rpy2.rinterface_lib.embedded.RRuntimeError:
@@ -463,9 +371,9 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
                         break
                     i += 1
         return self
-    
+
     def predict_proba(self, x):
-        
+
         """output probability prediction for given samples
         
         Parameters
@@ -483,9 +391,9 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
         return pred_proba
 
     def predict(self, x):
-        
+
         """output binary prediction for given samples
-        
+
         Parameters
         ---------
         x : array-like of shape (n_samples, n_features)
