@@ -212,6 +212,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         ax_height = tree.get_window_extent().height
 
         color_list = [229, 129, 57]
+        color_leaf_list = [57, 157, 229]
         values = np.array([item["value"] for key, item in self.tree.items()])
         min_value, max_value = values.min(), values.max()
 
@@ -221,7 +222,10 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                 color = color_list
             else:
                 alpha = (item["value"] - min_value) / (max_value - min_value)
-                color = [int(round(alpha * c + (1 - alpha) * 255, 0)) for c in color_list]
+                if item["is_leaf"]:
+                    color = [int(round(alpha * c + (1 - alpha) * 255, 0)) for c in color_leaf_list]
+                else:
+                    color = [int(round(alpha * c + (1 - alpha) * 255, 0)) for c in color_list]
             kwargs = dict(bbox={"fc": '#%2x%2x%2x' % tuple(color), "boxstyle": "round"}, arrowprops={"arrowstyle": "<-"},
                           ha='center', va='center', zorder=100 - 10 * item["depth"], xycoords='axes pixels', fontsize=14)
 

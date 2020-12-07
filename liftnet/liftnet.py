@@ -131,6 +131,84 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         beta = np.average(y.reshape(-1, 1) * s1, axis=0)
         return beta.reshape([-1, 1])
 
+    def visualize_one_leaf(self, node_id, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
+
+        """draw one of the leaf node.
+
+        Parameters
+        ---------
+        node_id : int
+            the id of leaf node
+        folder : str, optional, defalut="./results/"
+            the folder of the file to be saved
+        name : str, optional, default="global_plot"
+            the name of the file to be saved
+        save_png : bool, optional, default=False
+            whether to save the figure in png form
+        save_eps : bool, optional, default=False
+            whether to save the figure in eps form
+        """
+
+        check_is_fitted(self, "tree")
+        if node_id not in self.leaf_estimators_.keys():
+            raise("Invalid leaf node id.")
+
+        projection_indices = np.array([est.beta_.flatten() for nodeid, est in self.leaf_estimators_.items()]).T
+        if projection_indices.shape[1] > 0:
+            xlim_min = - max(np.abs(projection_indices.min() - 0.1), np.abs(projection_indices.max() + 0.1))
+            xlim_max = max(np.abs(projection_indices.min() - 0.1), np.abs(projection_indices.max() + 0.1))
+
+        fig = plt.figure(figsize=(12, 4))
+        est = self.leaf_estimators_[node_id]
+        outer = gridspec.GridSpec(1, 2, wspace=0.15)
+        inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[0], wspace=0.1, hspace=0.1, height_ratios=[6, 1])
+        ax1_main = fig.add_subplot(inner[0])
+        xgrid = np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 100).reshape([-1, 1])
+        ygrid = est.shape_fit_.decision_function(xgrid)
+        ax1_main.plot(xgrid, ygrid, color="red")
+        ax1_main.set_xticklabels([])
+        ax1_main.set_title("Node " + str(node_id), fontsize=16)
+        fig.add_subplot(ax1_main)
+
+        ax1_density = fig.add_subplot(inner[1])  
+        xint = ((np.array(est.shape_fit_.bins_[1:]) + np.array(est.shape_fit_.bins_[:-1])) / 2).reshape([-1, 1]).reshape([-1])
+        ax1_density.bar(xint, est.shape_fit_.density_, width=xint[1] - xint[0])
+        ax1_main.get_shared_x_axes().join(ax1_main, ax1_density)
+        ax1_density.set_yticklabels([])
+        fig.add_subplot(ax1_density)
+
+        ax2 = fig.add_subplot(outer[1])
+        if len(est.beta_) <= 20:
+            ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
+            ax2.set_yticks(np.arange(len(est.beta_)))
+            ax2.set_yticklabels(["X" + str(idx + 1) for idx in range(len(est.beta_.ravel()))][::-1])
+            ax2.set_xlim(xlim_min, xlim_max)
+            ax2.set_ylim(-1, len(est.beta_))
+            ax2.axvline(0, linestyle="dotted", color="black")
+        else:
+            right = np.round(np.linspace(0, np.round(len(est.beta_) * 0.45).astype(int), 5))
+            left = len(est.beta_) - 1 - right
+            input_ticks = np.unique(np.hstack([left, right])).astype(int)
+
+            ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
+            ax2.set_yticks(input_ticks)
+            ax2.set_yticklabels(["X" + str(idx + 1) for idx in input_ticks][::-1])
+            ax2.set_xlim(xlim_min, xlim_max)
+            ax2.set_ylim(-1, len(est.beta_))
+            ax2.axvline(0, linestyle="dotted", color="black")
+        fig.add_subplot(ax2)
+        plt.show()
+        if save_png:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            save_path = folder + name
+            fig.savefig("%s.png" % save_path, bbox_inches="tight", dpi=100)
+        if save_eps:
+            if not os.path.exists(folder):
+                os.makedirs(folder)
+            save_path = folder + name
+            fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
+
     def visualize_leaves(self, cols_per_row=3, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
 
         """draw the global interpretation of the fitted model
