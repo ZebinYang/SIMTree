@@ -173,7 +173,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                           "parent_xy": parent_xy,
                                           "estimator": item["estimator"],
-                                          "label": "_____  Node " + str(item["node_id"]) + " ________" +
+                                          "label": "____Node " + str(item["node_id"]) + "____" +
                                                 "\nMSE: " + str(np.round(item["impurity"], 3))
                                                  + "\nSize: " + str(int(item["n_samples"]))
                                                  + "\nMean: " + str(np.round(item["value"], 3))})
@@ -181,7 +181,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                           "parent_xy": parent_xy,
                                           "estimator": item["estimator"],
-                                          "label": "  Node " + str(item["node_id"]) + "  " +
+                                          "label": "____Node " + str(item["node_id"]) + "____" +
                                                 "\nCEntropy: " + str(np.round(item["impurity"], 3))
                                                  + "\nSize: " + str(int(item["n_samples"]))
                                                  + "\nMean: " + str(np.round(item["value"], 3))})
@@ -189,7 +189,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                 if is_regressor(self):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
-                                           "label": "  Node " + str(item["node_id"]) + "  " +
+                                           "label": "____Node " + str(item["node_id"]) + "____" +
                                                 "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3))
                                                 + "\nMSE: " + str(np.round(item["impurity"], 3))
                                                 + "\nSize: " + str(int(item["n_samples"]))
@@ -197,7 +197,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                 elif is_classifier(self):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
-                                           "label": "  Node " + str(item["node_id"]) + "  " +
+                                           "label": "____Node " + str(item["node_id"]) + "____" +
                                                 "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3))
                                                 + "\nCEntropy: " + str(np.round(item["impurity"], 3))
                                                 + "\nSize: " + str(int(item["n_samples"]))
@@ -222,10 +222,12 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                 color = color_list
             else:
                 alpha = (item["value"] - min_value) / (max_value - min_value)
+                alpha = np.clip(alpha, 0.1, 0.9)
                 if item["is_leaf"]:
                     color = [int(round(alpha * c + (1 - alpha) * 255, 0)) for c in color_leaf_list]
                 else:
                     color = [int(round(alpha * c + (1 - alpha) * 255, 0)) for c in color_list]
+
             kwargs = dict(bbox={"fc": '#%2x%2x%2x' % tuple(color), "boxstyle": "round"}, arrowprops={"arrowstyle": "<-"},
                           ha='center', va='center', zorder=100 - 10 * item["depth"], xycoords='axes pixels', fontsize=14)
 
