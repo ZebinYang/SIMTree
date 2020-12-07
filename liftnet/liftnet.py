@@ -158,7 +158,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
             xlim_min = - max(np.abs(projection_indices.min() - 0.1), np.abs(projection_indices.max() + 0.1))
             xlim_max = max(np.abs(projection_indices.min() - 0.1), np.abs(projection_indices.max() + 0.1))
 
-        fig = plt.figure(figsize=(12, 4))
+        fig = plt.figure(figsize=(8, 4.6))
         est = self.leaf_estimators_[node_id]
         outer = gridspec.GridSpec(1, 2, wspace=0.15)
         inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[0], wspace=0.1, hspace=0.1, height_ratios=[6, 1])
@@ -196,6 +196,18 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
             ax2.set_xlim(xlim_min, xlim_max)
             ax2.set_ylim(-1, len(est.beta_))
             ax2.axvline(0, linestyle="dotted", color="black")
+            
+        ax2title = ""
+        sortind = np.argsort(np.abs(est.beta_).ravel())[::-1]
+        for i in range(3):
+            if i > 0:
+                if est.beta_[sortind[i], 0] > 0:
+                    ax2title += " + "
+                else:
+                    ax2title += " - "
+            if np.abs(est.beta_[sortind[i], 0]) > 0.001:
+                ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + "X" + str(sortind[i] + 1)
+        ax2.set_title(ax2title)
         fig.add_subplot(ax2)
         plt.show()
         if save_png:
