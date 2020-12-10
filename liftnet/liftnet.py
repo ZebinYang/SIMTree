@@ -330,7 +330,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
     def build_root(self):
 
-        root_clf = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
+        root_clf = SimRegressor(nterms=None, reg_gamma=1e-5, degree=self.degree,
                         knot_num=self.knot_num, random_state=self.random_state)
         root_clf.fit(self.x, self.y)
         root_impurity = self.get_loss(self.y, root_clf.predict(self.x))
@@ -408,11 +408,11 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
             if max_deviation > 0:
                 left_indice = sample_indice[sortted_indice[:pos]]
                 right_indice = sample_indice[sortted_indice[pos:]]
-                left_clf = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
+                left_clf = SimRegressor(nterms=None, reg_gamma=1e-5, degree=self.degree,
                                 knot_num=self.knot_num, random_state=self.random_state)
                 left_clf.fit(self.x[left_indice], self.y[left_indice])
 
-                right_clf = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
+                right_clf = SimRegressor(nterms=None, reg_gamma=1e-5, degree=self.degree,
                                  knot_num=self.knot_num, random_state=self.random_state)
                 right_clf.fit(self.x[right_indice], self.y[right_indice])
 
@@ -458,14 +458,14 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
-                estimator = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
+                estimator = SimRegressor(nterms=None, reg_gamma=1e-5, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[left_indice], node_y[left_indice])
                 left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict(node_x[left_indice]))
 
                 right_indice = sortted_indice[(i + 1):]
-                estimator = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
+                estimator = SimRegressor(nterms=None, reg_gamma=1e-5, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[right_indice], node_y[right_indice])
@@ -593,11 +593,11 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
             if max_deviation > 0:
                 left_indice = sample_indice[sortted_indice[:pos]]
                 right_indice = sample_indice[sortted_indice[pos:]]
-                left_clf = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
+                left_clf = SimClassifier(nterms=None, reg_gamma=1e-5, degree=self.degree,
                                 knot_num=self.knot_num, random_state=self.random_state)
                 left_clf.fit(self.x[left_indice], self.y[left_indice])
 
-                right_clf = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
+                right_clf = SimClassifier(nterms=None, reg_gamma=1e-5, degree=self.degree,
                                  knot_num=self.knot_num, random_state=self.random_state)
                 right_clf.fit(self.x[right_indice], self.y[right_indice])
 
@@ -643,14 +643,14 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
-                estimator = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
+                estimator = SimClassifier(nterms=None, reg_gamma=1e-5, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[left_indice], node_y[left_indice])
                 left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict_proba(node_x[left_indice])[:, 1])
 
                 right_indice = sortted_indice[(i + 1):]
-                estimator = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
+                estimator = SimClassifier(nterms=None, reg_gamma=1e-5, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[right_indice], node_y[right_indice])
