@@ -37,7 +37,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
             raise ValueError("degree must be an integer, got %s." % self.max_depth)
 
             if self.max_depth < 0:
-                raise ValueError("degree must be >= 0, got" % self.max_depth)
+                raise ValueError("degree must be >= 0, got %s." % self.max_depth)
 
         if self.split_features is not None:
             if not isinstance(self.split_features, list):
@@ -48,13 +48,13 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
             raise ValueError("min_samples_leaf must be an integer, got %s." % self.min_samples_leaf)
 
             if self.min_samples_leaf < 0:
-                raise ValueError("min_samples_leaf must be >= 0, got" % self.min_samples_leaf)
+                raise ValueError("min_samples_leaf must be >= 0, got %s." % self.min_samples_leaf)
 
         if self.min_impurity_decrease < 0.:
             raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
 
         if self.val_ratio <= 0:
-            raise ValueError("val_ratio must be > 0, got" % self.val_ratio)
+            raise ValueError("val_ratio must be > 0, got %s." % self.val_ratio)
         elif self.val_ratio >= 1:
             raise ValueError("val_ratio must be < 1, got %s." % self.val_ratio)
 
