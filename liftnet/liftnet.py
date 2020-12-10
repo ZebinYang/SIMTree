@@ -125,9 +125,13 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         """
 
         mu = np.average(x, axis=0)
-        cov = np.cov(x.T)
-        inv_cov = np.linalg.pinv(cov, 1e-5)
-        s1 = np.dot(inv_cov, (x - mu).T).T
+#         cov = np.cov(x.T)
+#         inv_cov = np.linalg.pinv(cov, 1e-5)
+#         s1 = np.dot(inv_cov, (x - mu).T).T
+        var = np.std(x, 0) ** 2
+        var[var == 0] = np.inf
+        inv_cov = np.diag(1 / var)
+        s1 = np.diag(inv_cov) * (x - mu)
         beta = np.average(y.reshape(-1, 1) * s1, axis=0)
         return beta.reshape([-1, 1])
 
@@ -362,14 +366,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
         node_y = self.y[sample_indice]
         n_samples, n_features = node_x.shape
 
-        best_feature = None
-        best_position = None
-        best_threshold = None
-        best_left_indice = None
-        best_right_indice = None
-        best_impurity = np.inf
-        best_left_impurity = np.inf
-        best_right_impurity = np.inf
+        feature_impurity = []
         beta_parent = self._first_order(node_x, node_y)
         for feature_indice in self.split_features:
 
@@ -422,18 +419,72 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
                 left_impurity = self.get_loss(self.y[left_indice].ravel(), left_clf.predict(self.x[left_indice]))
                 right_impurity = self.get_loss(self.y[right_indice].ravel(), right_clf.predict(self.x[right_indice]))
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+                feature_impurity.append(current_impurity)
+            else:
+                feature_impurity.append(np.inf)
+
+        best_feature = None
+        best_position = None
+        best_threshold = None
+        best_left_indice = None
+        best_right_indice = None
+        best_impurity = np.inf
+        best_left_impurity = np.inf
+        best_right_impurity = np.inf
+        split_features = np.argsort(feature_impurity)[:3]
+        for feature_indice in split_features:
+
+            current_feature = node_x[:, feature_indice]
+            sortted_indice = np.argsort(current_feature)
+            sortted_feature = current_feature[sortted_indice]
+            feature_range = sortted_feature[-1] - sortted_feature[0]
+            if feature_range < EPSILON:
+                continue
+
+            split_point = 0
+            for i, _ in enumerate(sortted_indice):
+
+                if i == (n_samples - 1):
+                    continue
+
+                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                    continue
+                
+                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                    continue
+
+                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
+                    continue
+
+                split_point += 1
+                left_indice = sortted_indice[:(i + 1)]
+                estimator = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
+                                 knot_num=self.knot_num,
+                                 random_state=self.random_state)
+                estimator.fit(node_x[left_indice], node_y[left_indice])
+                left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict(node_x[left_indice]))
+
+                right_indice = sortted_indice[(i + 1):]
+                estimator = SimRegressor(nterms=None, reg_gamma=0, degree=self.degree,
+                                 knot_num=self.knot_num,
+                                 random_state=self.random_state)
+                estimator.fit(node_x[right_indice], node_y[right_indice])
+                right_impurity = self.get_loss(node_y[right_indice].ravel(), estimator.predict(node_x[right_indice]))
+
+                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
                 if current_impurity < best_impurity:
-                    best_position = pos
-                    best_threshold = threshold
+                    best_position = i + 1
                     best_feature = feature_indice
                     best_impurity = current_impurity
                     best_left_impurity = left_impurity
                     best_right_impurity = right_impurity
+                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+
         if best_position is not None:
             sortted_indice = np.argsort(node_x[:, best_feature])
             best_left_indice = sample_indice[sortted_indice[:best_position]]
             best_right_indice = sample_indice[sortted_indice[best_position:]]
-
+            
         node = {"feature": best_feature, "threshold": best_threshold, "left": best_left_indice, "right": best_right_indice,
               "impurity": best_impurity, "left_impurity": best_left_impurity, "right_impurity": best_right_impurity}
         return node
@@ -459,7 +510,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
     def build_root(self):
 
-        root_clf = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
+        root_clf = SimClassifier(nterms=None, reg_gamma=1e-5, degree=self.degree,
                          knot_num=self.knot_num, random_state=self.random_state)
         root_clf.fit(self.x, self.y)
         root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
@@ -499,14 +550,8 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
         node_x = self.x[sample_indice]
         node_y = self.y[sample_indice]
         n_samples, n_features = node_x.shape
-        best_feature = None
-        best_position = None
-        best_threshold = None
-        best_left_indice = None
-        best_right_indice = None
-        best_impurity = np.inf
-        best_left_impurity = np.inf
-        best_right_impurity = np.inf
+
+        feature_impurity = []
         beta_parent = self._first_order(node_x, node_y)
         for feature_indice in self.split_features:
 
@@ -526,7 +571,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
-                
+
                 if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
                     continue
 
@@ -544,6 +589,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                     pos = i + 1
                     max_deviation = deviation
                     threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+
             if max_deviation > 0:
                 left_indice = sample_indice[sortted_indice[:pos]]
                 right_indice = sample_indice[sortted_indice[pos:]]
@@ -558,13 +604,67 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                 left_impurity = self.get_loss(self.y[left_indice].ravel(), left_clf.predict_proba(self.x[left_indice])[:, 1])
                 right_impurity = self.get_loss(self.y[right_indice].ravel(), right_clf.predict_proba(self.x[right_indice])[:, 1])
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+                feature_impurity.append(current_impurity)
+            else:
+                feature_impurity.append(np.inf)
+
+        best_feature = None
+        best_position = None
+        best_threshold = None
+        best_left_indice = None
+        best_right_indice = None
+        best_impurity = np.inf
+        best_left_impurity = np.inf
+        best_right_impurity = np.inf
+        split_features = np.argsort(feature_impurity)[:3]
+        for feature_indice in split_features:
+
+            current_feature = node_x[:, feature_indice]
+            sortted_indice = np.argsort(current_feature)
+            sortted_feature = current_feature[sortted_indice]
+            feature_range = sortted_feature[-1] - sortted_feature[0]
+            if feature_range < EPSILON:
+                continue
+
+            split_point = 0
+            for i, _ in enumerate(sortted_indice):
+
+                if i == (n_samples - 1):
+                    continue
+
+                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                    continue
+                
+                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                    continue
+
+                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
+                    continue
+
+                split_point += 1
+                left_indice = sortted_indice[:(i + 1)]
+                estimator = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
+                                 knot_num=self.knot_num,
+                                 random_state=self.random_state)
+                estimator.fit(node_x[left_indice], node_y[left_indice])
+                left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict_proba(node_x[left_indice])[:, 1])
+
+                right_indice = sortted_indice[(i + 1):]
+                estimator = SimClassifier(nterms=None, reg_gamma=0, degree=self.degree,
+                                 knot_num=self.knot_num,
+                                 random_state=self.random_state)
+                estimator.fit(node_x[right_indice], node_y[right_indice])
+                right_impurity = self.get_loss(node_y[right_indice].ravel(), estimator.predict_proba(node_x[right_indice])[:, 1])
+
+                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
                 if current_impurity < best_impurity:
-                    best_position = pos
-                    best_threshold = threshold
+                    best_position = i + 1
                     best_feature = feature_indice
                     best_impurity = current_impurity
                     best_left_impurity = left_impurity
                     best_right_impurity = right_impurity
+                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+
         if best_position is not None:
             sortted_indice = np.argsort(node_x[:, best_feature])
             best_left_indice = sample_indice[sortted_indice[:best_position]]

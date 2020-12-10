@@ -206,7 +206,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
                 pending_node_list.append(self.tree[item["left_child_id"]])
                 pending_node_list.append(self.tree[item["right_child_id"]])
 
-        fig = plt.figure(figsize=(2 ** max_depth, (max_depth - 1) * 2))
+        fig = plt.figure(figsize=(2 ** max_depth, (max_depth - 0.8) * 2))
         tree = fig.add_axes([0.0, 0.0, 1, 1])
         ax_width = tree.get_window_extent().width
         ax_height = tree.get_window_extent().height
@@ -219,7 +219,10 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         for key, item in draw_tree.items():
 
             if max_value == min_value:
-                color = color_list
+                if item["is_leaf"]:
+                    color = color_leaf_list
+                else:
+                    color = color_list
             else:
                 alpha = (item["value"] - min_value) / (max_value - min_value)
                 alpha = np.clip(alpha, 0.1, 0.9)

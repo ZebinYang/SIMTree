@@ -68,10 +68,16 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
         if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
             derivative = np.zeros((x.shape[0], 1))
-        else:
+        elif "modelspec" in self.sm_.names:
             modelspec = self.sm_[int(np.where(self.sm_.names == "modelspec")[0][0])]
             knots = np.array(modelspec[0])
             coefs = np.array(modelspec[11]).reshape(-1, 1)
+            basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, d=order,
+                               xmin=0, xmax=1, periodic=False, intercept=True)
+            derivative = np.dot(basis[0], coefs).ravel()
+        else:
+            knots = np.array(self.sm_[12])
+            coefs = np.array(self.sm_[15]).reshape(-1, 1)
             basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, d=order,
                                xmin=0, xmax=1, periodic=False, intercept=True)
             derivative = np.dot(basis[0], coefs).ravel()
