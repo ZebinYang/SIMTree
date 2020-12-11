@@ -234,7 +234,7 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
                    "nknots": self.knot_num,
                    "type": "lin" if self.degree==1 else "cub",
                    "lambdas": self.reg_gamma,
-                   "rparm": 0.01}
+                   "rparm": 0.001}
             self.sm_ = bigsplines.bigspline(**kwargs)
         return self
 
@@ -365,14 +365,14 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
                            "family": "binomial",
                            "nknots": self.knot_num, 
                            "lambdas": self.reg_gamma,
-                           "rparm": 0.01,
+                           "rparm": 0.001,
                            "type": "lin" if self.degree==1 else "cub",
                            "data": pd.DataFrame({"x": x.ravel(), "y": y.ravel()})}
                     self.sm_ = bigsplines.bigssg(**kwargs)
                     exit = True
                 except rpy2.rinterface_lib.embedded.RRuntimeError:
                     if not isinstance(self.reg_gamma, str):
-                        self.reg_gamma += 10 ** (i - 9)
+                        self.reg_gamma = 10 ** (i - 9)
                     else:
                         break
                     i += 1
