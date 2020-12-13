@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import Ridge, LinearRegression, LogisticRegression
+from sklearn.linear_model import LassoCV, LinearRegression, LogisticRegressionCV
 from sklearn.base import RegressorMixin, ClassifierMixin
 
 from .mob import BaseMOBRegressor, BaseMOBClassifier
@@ -16,14 +16,13 @@ __all__ = ["MOBGLMRegressor", "MOBGLMClassifier"]
 class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
+                 n_split_grid=10, split_features=None, random_state=0):
 
         super(MOBGLMRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
-                                 val_ratio=val_ratio,
                                  random_state=random_state)
 
     def build_root(self):
@@ -35,16 +34,8 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
 
     def build_leaf(self, sample_indice):
 
-        best_estimator = None
-        best_impurity = np.inf
-        idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-        for alpha in (0.1, 1.0, 10.0):
-            estimator = Ridge(alpha=alpha)
-            estimator.fit(self.x[idx1], self.y[idx1])
-            current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
-            if current_impurity < best_impurity:
-                best_estimator = estimator
-                best_impurity = current_impurity
+        best_estimator = LassoCV(cv=5)
+        best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
         return predict_func, best_estimator, best_impurity
@@ -119,14 +110,13 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
 class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
+                 n_split_grid=10, split_features=None, random_state=0):
 
         super(MOBGLMClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
-                                 val_ratio=val_ratio,
                                  random_state=random_state)
 
     def build_root(self):
@@ -139,20 +129,12 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
     def build_leaf(self, sample_indice):
 
         best_estimator = None
-        idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-        if (self.y[sample_indice].std() == 0) | (self.y[idx1].std() == 0) | (self.y[idx2].std() == 0):
+        if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].sum() < 5) | ((1 - self.y[sample_indice]).sum() < 5):
             best_impurity = 0
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
-            best_impurity = np.inf
-            idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-            for alpha in (0.1, 1.0, 10.0):
-                estimator = LogisticRegression(C=alpha)
-                estimator.fit(self.x[idx1], self.y[idx1])
-                current_impurity = self.get_loss(self.y[idx2], estimator.predict_proba(self.x[idx2])[:, 1])
-                if current_impurity < best_impurity:
-                    best_estimator = estimator
-                    best_impurity = current_impurity
+            best_estimator = LogisticRegressionCV(penalty="l1", solver="liblinear", cv=5)
+            best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
             predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
             best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity

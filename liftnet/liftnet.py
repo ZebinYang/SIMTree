@@ -8,6 +8,7 @@ from abc import ABCMeta, abstractmethod
 from sklearn.model_selection import train_test_split
 from sklearn.base import RegressorMixin, ClassifierMixin
 from sklearn.utils.validation import check_is_fitted
+from sklearn.model_selection import GridSearchCV
 
 from .sim import SimRegressor, SimClassifier
 from .mob import BaseMOB, BaseMOBRegressor, BaseMOBClassifier
@@ -27,7 +28,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0.0001, n_split_grid=10, split_features=None,
-                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, val_ratio=0.2, random_state=0):
+                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
         self.max_depth = max_depth
         self.n_split_grid = n_split_grid
@@ -40,7 +41,6 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
 
-        self.val_ratio = val_ratio
         self.random_state = random_state
 
     def _validate_hyperparameters(self):
@@ -63,11 +63,6 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 
         if self.min_impurity_decrease < 0.:
             raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
-
-        if self.val_ratio <= 0:
-            raise ValueError("val_ratio must be > 0, got %s." % self.val_ratio)
-        elif self.val_ratio >= 1:
-            raise ValueError("val_ratio must be < 1, got %s." % self.val_ratio)
 
         if not isinstance(self.degree, int):
             raise ValueError("degree must be an integer, got %s." % self.degree)
@@ -307,8 +302,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
-                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
-                 val_ratio=0.2, random_state=0):
+                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -319,7 +313,6 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
-                                 val_ratio=val_ratio,
                                  random_state=random_state)
 
     def build_root(self):
@@ -334,18 +327,13 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
         best_estimator = None
         n_samples = len(sample_indice)
-        best_impurity = np.inf
-        idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-        for reg_lambda in self.reg_lambda_list:
-            for reg_gamma in self.reg_gamma_list:
-                estimator = SimRegressor(reg_lambda=reg_lambda, reg_gamma=reg_gamma, degree=self.degree,
-                                 knot_num=self.knot_num, random_state=self.random_state)
-                estimator.fit(self.x[idx1], self.y[idx1])
-                current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
-                if current_impurity < best_impurity:
-                    best_estimator = estimator
-                    best_impurity = current_impurity
-        best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
+        base = SimRegressor(degree=self.degree, knot_num=self.knot_num, random_state=self.random_state)
+        grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda_list,
+                                  "reg_gamma": self.reg_gamma_list},
+                      scoring={"auc": make_scorer(roc_auc_score, needs_proba=True)},
+                      cv=5, refit="auc", n_jobs=1, error_score=np.nan)
+        grid.fit(train_x[idx1, :], train_y[idx1, :].ravel())
+        best_estimator = grid.best_estimator_
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
         return predict_func, best_estimator, best_impurity
@@ -483,7 +471,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
-                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, val_ratio=0.2, random_state=0):
+                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -494,7 +482,6 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
-                                 val_ratio=val_ratio,
                                  random_state=random_state)
 
     def build_root(self):
@@ -509,23 +496,17 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
         best_estimator = None
         n_samples = len(sample_indice)
-        idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-        if (self.y[sample_indice].std() == 0) | (self.y[idx1].std() == 0) | (self.y[idx2].std() == 0):
+        if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].sum() < 5) | ((1 - self.y[sample_indice]).sum() < 5):
             best_impurity = 0
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
-            best_impurity = np.inf
-            for reg_lambda in self.reg_lambda_list:
-                for reg_gamma in self.reg_gamma_list:
-                    estimator = SimClassifier(degree=self.degree,
-                             reg_lambda=reg_lambda, reg_gamma=reg_gamma, knot_num=self.knot_num,
-                             random_state=self.random_state)
-                    estimator.fit(self.x[idx1], self.y[idx1])
-                    current_impurity = self.get_loss(self.y[idx2], estimator.predict_proba(self.x[idx2])[:, 1])
-                    if current_impurity < best_impurity:
-                        best_estimator = estimator
-                        best_impurity = current_impurity
-            best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
+            base = SimClassifier(degree=self.degree, knot_num=self.knot_num)
+            grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda_list,
+                                      "reg_gamma": self.reg_gamma_list},
+                          scoring={"auc": make_scorer(roc_auc_score, needs_proba=True)},
+                          cv=5, refit="auc", n_jobs=1, error_score=np.nan)
+            grid.fit(train_x[idx1, :], train_y[idx1, :].ravel())
+            best_estimator = grid.best_estimator_
             predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
             best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity

@@ -20,7 +20,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
+                 n_split_grid=10, split_features=None, random_state=0):
 
         self.max_depth = max_depth
         self.n_split_grid = n_split_grid
@@ -28,7 +28,6 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
 
-        self.val_ratio = val_ratio
         self.random_state = random_state
 
     def _validate_hyperparameters(self):
@@ -52,11 +51,6 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
 
         if self.min_impurity_decrease < 0.:
             raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
-
-        if self.val_ratio <= 0:
-            raise ValueError("val_ratio must be > 0, got %s." % self.val_ratio)
-        elif self.val_ratio >= 1:
-            raise ValueError("val_ratio must be < 1, got %s." % self.val_ratio)
 
     @abstractmethod
     def build_root(self):
@@ -301,14 +295,13 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
 class BaseMOBRegressor(BaseMOB, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
+                 n_split_grid=10, split_features=None, random_state=0):
 
         super(BaseMOBRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
-                                 val_ratio=val_ratio,
                                  random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -341,14 +334,13 @@ class BaseMOBRegressor(BaseMOB, RegressorMixin):
 class BaseMOBClassifier(BaseMOB, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, val_ratio=0.2, random_state=0):
+                 n_split_grid=10, split_features=None, random_state=0):
 
         super(BaseMOBClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
-                                 val_ratio=val_ratio,
                                  random_state=random_state)
 
     def _validate_input(self, x, y):
