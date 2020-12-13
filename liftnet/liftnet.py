@@ -331,7 +331,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
         base = SimRegressor(degree=self.degree, knot_num=self.knot_num, random_state=self.random_state)
         grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda_list,
                                   "reg_gamma": self.reg_gamma_list},
-                      scoring={"mse": make_scorer(mean_squared_error, needs_proba=True)},
+                      scoring={"mse": make_scorer(mean_squared_error)},
                       cv=5, refit="mse", n_jobs=1, error_score=np.nan)
         grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
         best_estimator = grid.best_estimator_
