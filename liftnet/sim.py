@@ -20,9 +20,9 @@ __all__ = ["SimRegressor", "SimClassifier"]
 class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, nterms=5, reg_gamma=0.1, knot_num=10, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, degree=3, random_state=0):
 
-        self.nterms = nterms
+        self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
         self.knot_num = knot_num
         self.degree = degree
@@ -50,8 +50,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         self.inv_cov = np.linalg.pinv(self.cov)
         s1 = np.dot(self.inv_cov, (x - self.mu).T).T
         zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
-        inactive_index = np.argsort(np.abs(zbar))[::-1][self.nterms:]
-        zbar[inactive_index] = 0
+        zbar[np.abs(zbar) < self.reg_lambda * np.max(np.abs(zbar))] = 0
         if np.linalg.norm(zbar) > 0:
             beta = zbar / np.linalg.norm(zbar)
         else:
@@ -77,9 +76,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         np.random.seed(self.random_state)
         x, y = self._validate_input(x, y)
         n_samples, n_features = x.shape
-        if self.nterms is None:
-            self.nterms = n_features
-
         self.beta_ = self._first_order_thres(x, y)
 
         if len(self.beta_[np.abs(self.beta_) > 0]) > 0:
@@ -170,8 +166,8 @@ class SimRegressor(BaseSim, RegressorMixin):
 
     Parameters
     ----------
-    nterms : int, optional. default=5
-        Maximum number of selected projection indices.
+    reg_lambda : float, optional. default=0.1
+        Sparsity penalty strength
 
     reg_gamma : float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
@@ -186,9 +182,9 @@ class SimRegressor(BaseSim, RegressorMixin):
         Random seed
     """
 
-    def __init__(self, nterms=5, reg_gamma=0.1, knot_num=10, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, degree=3, random_state=0):
 
-        super(SimRegressor, self).__init__(nterms=nterms,
+        super(SimRegressor, self).__init__(reg_lambda=reg_lambda,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 degree=degree,
@@ -254,14 +250,14 @@ class SimClassifier(BaseSim, ClassifierMixin):
 
     Parameters
     ----------
-    nterms : int, optional. default=5
-        Maximum number of selected projection indices.
+    reg_lambda : float, optional. default=0.1
+        Sparsity penalty strength
 
     reg_gamma : float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
 
     degree : int, optional. default=3
-        The order of the spline.
+        The order of the spline
 
     knot_num : int, optional. default=10
         Number of knots
@@ -270,9 +266,9 @@ class SimClassifier(BaseSim, ClassifierMixin):
         Random seed
     """
 
-    def __init__(self, nterms=5, reg_gamma=0.1, knot_num=10, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, degree=3, random_state=0):
 
-        super(SimClassifier, self).__init__(nterms=nterms,
+        super(SimClassifier, self).__init__(reg_lambda=reg_lambda,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 degree=degree,

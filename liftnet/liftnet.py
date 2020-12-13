@@ -27,7 +27,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0.0001, n_split_grid=10, split_features=None,
-                 degree=3, knot_num=5, nterms=5, reg_gamma=0.1, val_ratio=0.2, random_state=0):
+                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, val_ratio=0.2, random_state=0):
 
         self.max_depth = max_depth
         self.n_split_grid = n_split_grid
@@ -37,7 +37,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 
         self.degree = degree
         self.knot_num = knot_num
-        self.nterms = nterms
+        self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
 
         self.val_ratio = val_ratio
@@ -79,17 +79,17 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
             if self.knot_num <= 0:
                 raise ValueError("knot_num must be > 0, got %s." % self.knot_num)
 
-        if isinstance(self.nterms, list):
-            for val in self.nterms:
-                if val <= 0:
-                    raise ValueError("all the elements in nterms must be >= 1, got %s." % self.nterms)
-            self.nterms_list = self.nterms
-        elif (isinstance(self.nterms, float)) or (isinstance(self.nterms, int)):
-            if self.nterms <= 0:
-                raise ValueError("nterms must be >= 1, got %s." % self.nterms)
-            self.nterms_list = [self.nterms]
+        if isinstance(self.reg_lambda, list):
+            for val in self.reg_lambda:
+                if val < 0:
+                    raise ValueError("all the elements in reg_lambda must be >= 0, got %s." % self.reg_lambda)
+            self.reg_lambda_list = self.reg_lambda
+        elif (isinstance(self.reg_lambda, float)) or (isinstance(self.reg_lambda, int)):
+            if (self.reg_lambda < 0) or (self.reg_lambda > 1):
+                raise ValueError("reg_lambda must be >= 0 and <=1, got %s." % self.reg_lambda)
+            self.reg_lambda_list = [self.reg_lambda]
         else:
-            raise ValueError("Invalid nterms")
+            raise ValueError("Invalid reg_lambda")
 
         if isinstance(self.reg_gamma, list):
             for val in self.reg_gamma:
@@ -307,7 +307,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
-                 degree=3, knot_num=5, nterms=5, reg_gamma=0.1,
+                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1,
                  val_ratio=0.2, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
@@ -317,14 +317,14 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
                                  split_features=split_features,
                                  degree=degree,
                                  knot_num=knot_num,
-                                 nterms=nterms,
+                                 reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
                                  val_ratio=val_ratio,
                                  random_state=random_state)
 
     def build_root(self):
 
-        root_clf = SimRegressor(nterms=None, reg_gamma=1e-9, degree=self.degree,
+        root_clf = SimRegressor(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                         knot_num=self.knot_num, random_state=self.random_state)
         root_clf.fit(self.x, self.y)
         root_impurity = self.get_loss(self.y, root_clf.predict(self.x))
@@ -336,9 +336,9 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
         n_samples = len(sample_indice)
         best_impurity = np.inf
         idx1, idx2 = train_test_split(sample_indice, test_size=self.val_ratio, random_state=self.random_state)
-        for nterms in self.nterms_list:
+        for reg_lambda in self.reg_lambda_list:
             for reg_gamma in self.reg_gamma_list:
-                estimator = SimRegressor(nterms=nterms, reg_gamma=reg_gamma, degree=self.degree,
+                estimator = SimRegressor(reg_lambda=reg_lambda, reg_gamma=reg_gamma, degree=self.degree,
                                  knot_num=self.knot_num, random_state=self.random_state)
                 estimator.fit(self.x[idx1], self.y[idx1])
                 current_impurity = self.get_loss(self.y[idx2], estimator.predict(self.x[idx2]))
@@ -398,11 +398,11 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
             if max_deviation > 0:
                 left_indice = sample_indice[sortted_indice[:pos]]
                 right_indice = sample_indice[sortted_indice[pos:]]
-                left_clf = SimRegressor(nterms=None, reg_gamma=1e-9, degree=self.degree,
+                left_clf = SimRegressor(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                                 knot_num=self.knot_num, random_state=self.random_state)
                 left_clf.fit(self.x[left_indice], self.y[left_indice])
 
-                right_clf = SimRegressor(nterms=None, reg_gamma=1e-9, degree=self.degree,
+                right_clf = SimRegressor(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                                  knot_num=self.knot_num, random_state=self.random_state)
                 right_clf.fit(self.x[right_indice], self.y[right_indice])
 
@@ -448,14 +448,14 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
-                estimator = SimRegressor(nterms=None, reg_gamma=1e-9, degree=self.degree,
+                estimator = SimRegressor(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[left_indice], node_y[left_indice])
                 left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict(node_x[left_indice]))
 
                 right_indice = sortted_indice[(i + 1):]
-                estimator = SimRegressor(nterms=None, reg_gamma=1e-9, degree=self.degree,
+                estimator = SimRegressor(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[right_indice], node_y[right_indice])
@@ -483,7 +483,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
-                 degree=3, knot_num=5, nterms=5, reg_gamma=0.1, val_ratio=0.2, random_state=0):
+                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, val_ratio=0.2, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -492,14 +492,14 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                                  split_features=split_features,
                                  degree=degree,
                                  knot_num=knot_num,
-                                 nterms=nterms,
+                                 reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
                                  val_ratio=val_ratio,
                                  random_state=random_state)
 
     def build_root(self):
 
-        root_clf = SimClassifier(nterms=None, reg_gamma=1e-9, degree=self.degree,
+        root_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                          knot_num=self.knot_num, random_state=self.random_state)
         root_clf.fit(self.x, self.y)
         root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
@@ -515,10 +515,10 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
             best_impurity = np.inf
-            for nterms in self.nterms_list:
+            for reg_lambda in self.reg_lambda_list:
                 for reg_gamma in self.reg_gamma_list:
                     estimator = SimClassifier(degree=self.degree,
-                             nterms=nterms, reg_gamma=reg_gamma, knot_num=self.knot_num,
+                             reg_lambda=reg_lambda, reg_gamma=reg_gamma, knot_num=self.knot_num,
                              random_state=self.random_state)
                     estimator.fit(self.x[idx1], self.y[idx1])
                     current_impurity = self.get_loss(self.y[idx2], estimator.predict_proba(self.x[idx2])[:, 1])
@@ -578,11 +578,11 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
             if max_deviation > 0:
                 left_indice = sample_indice[sortted_indice[:pos]]
                 right_indice = sample_indice[sortted_indice[pos:]]
-                left_clf = SimClassifier(nterms=None, reg_gamma=1e-9, degree=self.degree,
+                left_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                                 knot_num=self.knot_num, random_state=self.random_state)
                 left_clf.fit(self.x[left_indice], self.y[left_indice])
 
-                right_clf = SimClassifier(nterms=None, reg_gamma=1e-9, degree=self.degree,
+                right_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                                  knot_num=self.knot_num, random_state=self.random_state)
                 right_clf.fit(self.x[right_indice], self.y[right_indice])
 
@@ -628,14 +628,14 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
-                estimator = SimClassifier(nterms=None, reg_gamma=1e-9, degree=self.degree,
+                estimator = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[left_indice], node_y[left_indice])
                 left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict_proba(node_x[left_indice])[:, 1])
 
                 right_indice = sortted_indice[(i + 1):]
-                estimator = SimClassifier(nterms=None, reg_gamma=1e-9, degree=self.degree,
+                estimator = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[right_indice], node_y[right_indice])
