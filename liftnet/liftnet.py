@@ -333,7 +333,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
                                   "reg_gamma": self.reg_gamma_list},
                       scoring={"auc": make_scorer(roc_auc_score, needs_proba=True)},
                       cv=5, refit="auc", n_jobs=1, error_score=np.nan)
-        grid.fit(train_x[idx1, :], train_y[idx1, :].ravel())
+        grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
         best_estimator = grid.best_estimator_
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
@@ -506,7 +506,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                                       "reg_gamma": self.reg_gamma_list},
                           scoring={"auc": make_scorer(roc_auc_score, needs_proba=True)},
                           cv=5, refit="auc", n_jobs=1, error_score=np.nan)
-            grid.fit(train_x[idx1, :], train_y[idx1, :].ravel())
+            grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
             best_estimator = grid.best_estimator_
             predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
             best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
