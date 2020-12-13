@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LassoCV, LinearRegression, LogisticRegressionCV
+from sklearn.linear_model import LinearRegression, LassoCV, LogisticRegression, LogisticRegressionCV
 from sklearn.base import RegressorMixin, ClassifierMixin
 
 from .mob import BaseMOBRegressor, BaseMOBClassifier
@@ -121,7 +121,7 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
 
     def build_root(self):
 
-        root_clf = LogisticRegressionCV(penalty='none', random_state=self.random_state)
+        root_clf = LogisticRegression(penalty='none', random_state=self.random_state)
         root_clf.fit(self.x, self.y.ravel())
         root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
         return root_impurity
