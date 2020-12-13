@@ -234,7 +234,7 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
                    "nknots": self.knot_num,
                    "type": "lin" if self.degree==1 else "cub",
                    "lambdas": self.reg_gamma,
-                   "rparm": 0.001}
+                   "rparm": 0.01}
             self.sm_ = bigsplines.bigspline(**kwargs)
         return self
 
@@ -365,7 +365,7 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
                            "family": "binomial",
                            "nknots": self.knot_num, 
                            "lambdas": self.reg_gamma,
-                           "rparm": 0.001,
+                           "rparm": 0.01,
                            "type": "lin" if self.degree==1 else "cub",
                            "data": pd.DataFrame({"x": x.ravel(), "y": y.ravel()})}
                     self.sm_ = bigsplines.bigssg(**kwargs)
