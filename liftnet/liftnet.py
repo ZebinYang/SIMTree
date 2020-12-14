@@ -28,12 +28,14 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
      """
 
     @abstractmethod
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0.0001, n_split_grid=10, split_features=None,
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0.0001,
+                 n_split_grid=10, split_features=None, n_feature_search=1,
                  degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
         self.max_depth = max_depth
         self.n_split_grid = n_split_grid
         self.split_features = split_features
+        self.n_feature_search = n_feature_search
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
 
@@ -48,7 +50,6 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 
         if not isinstance(self.max_depth, int):
             raise ValueError("degree must be an integer, got %s." % self.max_depth)
-
             if self.max_depth < 0:
                 raise ValueError("degree must be >= 0, got %s." % self.max_depth)
 
@@ -56,9 +57,13 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
             if not isinstance(self.split_features, list):
                 raise ValueError("split_features must be an list or None, got %s." % self.split_features)
 
+        if not isinstance(self.n_feature_search, int):
+            raise ValueError("n_feature_search must be an integer, got %s." % self.n_feature_search)
+            if self.n_feature_search <= 0:
+                raise ValueError("n_feature_search must be > 0, got %s." % self.n_feature_search)
+                
         if not isinstance(self.min_samples_leaf, int):
             raise ValueError("min_samples_leaf must be an integer, got %s." % self.min_samples_leaf)
-
             if self.min_samples_leaf < 0:
                 raise ValueError("min_samples_leaf must be >= 0, got %s." % self.min_samples_leaf)
 
@@ -114,12 +119,19 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         np.array of shape (n_features, 1)
             the normalized projection inidce
         """
-
-        mu = np.average(x, axis=0)
-        cov = np.cov(x.T)
-        inv_cov = np.linalg.pinv(cov, 1e-5)
-        s1 = np.dot(inv_cov, (x - mu).T).T
-        s1 = np.diag(inv_cov) * (x - mu)
+        # for high dimensional data,
+        # we speed up the computation by ignoring the correlation among variables.
+        if x.shape[1] <= 100:
+            mu = np.average(x, axis=0)
+            cov = np.cov(x.T)
+            inv_cov = np.linalg.pinv(cov, 1e-5)
+            s1 = np.dot(inv_cov, (x - mu).T).T
+        else:
+            mu = np.average(x, axis=0)
+            var = np.std(x, 0) ** 2
+            var[var == 0] = np.inf
+            inv_cov = np.diag(1 / var)
+            s1 = np.diag(inv_cov) * (x - mu)
         beta = np.average(y.reshape(-1, 1) * s1, axis=0)
         return beta.reshape([-1, 1])
 
@@ -316,7 +328,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 
 class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None, n_feature_search=1,
                  degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
@@ -324,6 +336,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
+                                 n_feature_search=n_feature_search,
                                  degree=degree,
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
@@ -422,7 +435,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        split_features = np.argsort(feature_impurity)[:1]
+        split_features = np.argsort(feature_impurity)[:self.n_feature_search]
         for feature_indice in split_features:
 
             current_feature = node_x[:, feature_indice]
@@ -483,7 +496,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
 class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None,
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None, n_feature_search=1,
                  degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
@@ -491,6 +504,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
+                                 n_feature_search=n_feature_search,
                                  degree=degree,
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
@@ -594,7 +608,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        split_features = np.argsort(feature_impurity)[:1]
+        split_features = np.argsort(feature_impurity)[:self.n_feature_search]
         for feature_indice in split_features:
 
             current_feature = node_x[:, feature_indice]
