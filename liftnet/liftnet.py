@@ -143,7 +143,8 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 
         check_is_fitted(self, "tree")
         if node_id not in self.leaf_estimators_.keys():
-            raise("Invalid leaf node id.")
+            print("Invalid leaf node id.")
+            return
 
         projection_indices = np.array([est.beta_.flatten() for nodeid, est in self.leaf_estimators_.items() if est is not None]).T
         if projection_indices.shape[1] > 0:
@@ -160,6 +161,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         ax1_main.plot(xgrid, ygrid, color="red")
         ax1_main.set_xticklabels([])
         ax1_main.set_title("Node " + str(node_id), fontsize=16)
+        ax1_main.set_xticks(np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 5))
         fig.add_subplot(ax1_main)
 
         ax1_density = fig.add_subplot(inner[1])  
@@ -167,10 +169,11 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         ax1_density.bar(xint, est.shape_fit_.density_, width=xint[1] - xint[0])
         ax1_main.get_shared_x_axes().join(ax1_main, ax1_density)
         ax1_density.set_yticklabels([])
+        ax1_density.set_xticks(np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 5))
         fig.add_subplot(ax1_density)
 
         ax2 = fig.add_subplot(outer[1])
-        if len(est.beta_) <= 20:
+        if len(est.beta_) <= 50:
             ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
             ax2.set_yticks(np.arange(len(est.beta_)))
             ax2.set_yticklabels(["X" + str(idx + 1) for idx in range(len(est.beta_.ravel()))][::-1])
@@ -191,15 +194,24 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
             
         ax2title = ""
         sortind = np.argsort(np.abs(est.beta_).ravel())[::-1]
-        for i in range(3):
-            if i > 0:
-                if est.beta_[sortind[i], 0] > 0:
-                    ax2title += " + "
-                else:
-                    ax2title += " - "
-            if np.abs(est.beta_[sortind[i], 0]) > 0.001:
+        for i in range(est.beta_.shape[0]):
+            if i == 0:
                 ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + "X" + str(sortind[i] + 1)
-        ax2title += "+..."
+                continue
+            elif (i > 0) & (i < 3):
+                if np.abs(est.beta_[sortind[i], 0]) > 0.001:
+                    if est.beta_[sortind[i], 0] > 0:
+                        ax2title += " + "
+                    else:
+                        ax2title += " - "
+                    ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + "X" + str(sortind[i] + 1)
+                else:
+                    break
+            elif i == 3:
+                if np.abs(est.beta_[sortind[3], 0]) > 0.001:
+                    ax2title += "+..."
+            else:
+                break
         ax2.set_title(ax2title)
         fig.add_subplot(ax2)
         plt.show()
@@ -255,6 +267,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
             ax1_main.plot(xgrid, ygrid, color="red")
             ax1_main.set_xticklabels([])
             ax1_main.set_title("Node " + str(node_id), fontsize=16)
+            ax1_main.set_xticks(np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 5))
             fig.add_subplot(ax1_main)
 
             ax1_density = fig.add_subplot(inner[1, 0])  
@@ -262,6 +275,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
             ax1_density.bar(xint, est.shape_fit_.density_, width=xint[1] - xint[0])
             ax1_main.get_shared_x_axes().join(ax1_main, ax1_density)
             ax1_density.set_yticklabels([])
+            ax1_density.set_xticks(np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 5))
             fig.add_subplot(ax1_density)
 
             ax2 = fig.add_subplot(inner[:, 1])
@@ -326,8 +340,6 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
 
     def build_leaf(self, sample_indice):
 
-        best_estimator = None
-        n_samples = len(sample_indice)
         base = SimRegressor(degree=self.degree, knot_num=self.knot_num, random_state=self.random_state)
         grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda_list,
                                   "reg_gamma": self.reg_gamma_list},
@@ -495,10 +507,9 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
 
     def build_leaf(self, sample_indice):
 
-        best_estimator = None
-        n_samples = len(sample_indice)
         if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].sum() < 5) | ((1 - self.y[sample_indice]).sum() < 5):
             best_impurity = 0
+            best_estimator = None
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
             base = SimClassifier(degree=self.degree, knot_num=self.knot_num)

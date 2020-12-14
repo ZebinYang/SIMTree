@@ -128,9 +128,9 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
 
     def build_leaf(self, sample_indice):
 
-        best_estimator = None
         if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].sum() < 5) | ((1 - self.y[sample_indice]).sum() < 5):
             best_impurity = 0
+            best_estimator = None
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
             best_estimator = LogisticRegressionCV(penalty="l1", solver="liblinear", cv=5)
