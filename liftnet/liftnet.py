@@ -6,10 +6,10 @@ from matplotlib import pyplot as plt
 from abc import ABCMeta, abstractmethod
 
 from sklearn.model_selection import train_test_split
-from sklearn.base import RegressorMixin, ClassifierMixin
 from sklearn.utils.validation import check_is_fitted
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import make_scorer, roc_auc_score, mean_squared_error
+from sklearn.base import RegressorMixin, ClassifierMixin, is_regressor, is_classifier
 
 from .sim import SimRegressor, SimClassifier
 from .mob import BaseMOB, BaseMOBRegressor, BaseMOBClassifier
