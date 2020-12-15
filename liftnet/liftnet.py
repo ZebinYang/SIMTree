@@ -201,7 +201,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
 #             else:
 #                 feature_impurity.append(np.inf)
         split_feature_indices = np.argsort(feature_impurity)[:self.n_feature_search]
-        important_split_features = self.split_features[split_feature_indices]
+        important_split_features = np.array(self.split_features)[split_feature_indices]
         return important_split_features
         
     def visualize_one_leaf(self, node_id, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
