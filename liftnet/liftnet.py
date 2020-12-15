@@ -18,7 +18,7 @@ from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning
 simplefilter("ignore", category=ConvergenceWarning)
 
-EPSILON = 1e-7
+EPSILON = 1e-8
 __all__ = ["LIFTNetRegressor", "LIFTNetClassifier"]
 
 
@@ -124,7 +124,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         if x.shape[1] <= 100:
             mu = np.average(x, axis=0)
             cov = np.cov(x.T)
-            inv_cov = np.linalg.pinv(cov, 1e-7)
+            inv_cov = np.linalg.pinv(cov, 1e-8)
             s1 = np.dot(inv_cov, (x - mu).T).T
         else:
             mu = np.average(x, axis=0)
