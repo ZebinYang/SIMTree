@@ -135,7 +135,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         beta = np.average(y.reshape(-1, 1) * s1, axis=0)
         return beta.reshape([-1, 1])
     
-    def select_split_features(self, sample_indice):
+    def select_features(self, sample_indice):
             
         node_x = self.x[sample_indice]
         node_y = self.y[sample_indice]
