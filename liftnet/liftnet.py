@@ -182,28 +182,27 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
                     pos = i + 1
                     max_deviation = deviation
                     threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
-            feature_impurity.append(- max_deviation)
-#             if max_deviation > 0:
-#                 left_indice = sample_indice[sortted_indice[:pos]]
-#                 right_indice = sample_indice[sortted_indice[pos:]]
-#                 left_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
-#                                 knot_num=self.knot_num, random_state=self.random_state)
-#                 left_clf.fit(self.x[left_indice], self.y[left_indice])
+            if max_deviation > 0:
+                left_indice = sample_indice[sortted_indice[:pos]]
+                right_indice = sample_indice[sortted_indice[pos:]]
+                left_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                                knot_num=self.knot_num, random_state=self.random_state)
+                left_clf.fit(self.x[left_indice], self.y[left_indice])
 
-#                 right_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
-#                                  knot_num=self.knot_num, random_state=self.random_state)
-#                 right_clf.fit(self.x[right_indice], self.y[right_indice])
+                right_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                                 knot_num=self.knot_num, random_state=self.random_state)
+                right_clf.fit(self.x[right_indice], self.y[right_indice])
 
-#                 left_impurity = self.get_loss(self.y[left_indice].ravel(), left_clf.predict_proba(self.x[left_indice])[:, 1])
-#                 right_impurity = self.get_loss(self.y[right_indice].ravel(), right_clf.predict_proba(self.x[right_indice])[:, 1])
-#                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
-#                 feature_impurity.append(current_impurity)
-#             else:
-#                 feature_impurity.append(np.inf)
+                left_impurity = self.get_loss(self.y[left_indice].ravel(), left_clf.predict_proba(self.x[left_indice])[:, 1])
+                right_impurity = self.get_loss(self.y[right_indice].ravel(), right_clf.predict_proba(self.x[right_indice])[:, 1])
+                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+                feature_impurity.append(current_impurity)
+            else:
+                feature_impurity.append(np.inf)
         split_feature_indices = np.argsort(feature_impurity)[:self.n_feature_search]
         important_split_features = np.array(self.split_features)[split_feature_indices]
         return important_split_features
-        
+
     def visualize_one_leaf(self, node_id, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
 
         """draw one of the leaf node.
