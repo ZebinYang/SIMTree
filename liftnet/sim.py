@@ -47,7 +47,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
         self.mu = np.average(x, axis=0)
         self.cov = np.cov(x.T)
-        self.inv_cov = np.linalg.pinv(self.cov)
+        self.inv_cov = np.linalg.pinv(self.cov, 1e-5)
         s1 = np.dot(self.inv_cov, (x - self.mu).T).T
         zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
         zbar[np.abs(zbar) < self.reg_lambda * np.max(np.abs(zbar))] = 0
