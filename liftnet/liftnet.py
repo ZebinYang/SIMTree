@@ -18,7 +18,6 @@ from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning
 simplefilter("ignore", category=ConvergenceWarning)
 
-EPSILON = 1e-8
 __all__ = ["LIFTNetRegressor", "LIFTNetClassifier"]
 
 
@@ -124,7 +123,7 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         if x.shape[1] <= 100:
             mu = np.average(x, axis=0)
             cov = np.cov(x.T)
-            inv_cov = np.linalg.pinv(cov, 1e-5)
+            inv_cov = np.linalg.pinv(cov, 1e-7)
             s1 = np.dot(inv_cov, (x - mu).T).T
         else:
             mu = np.average(x, axis=0)
@@ -237,6 +236,10 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
         check_is_fitted(self, "tree")
         if node_id not in self.leaf_estimators_.keys():
             print("Invalid leaf node id.")
+            return
+
+        if self.leaf_estimators_[node_id] is None:
+            print("This is a constant node, and SIM is not available.")
             return
 
         projection_indices = np.array([est.beta_.flatten() for nodeid, est in self.leaf_estimators_.items() if est is not None]).T
@@ -466,7 +469,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
             sortted_indice = np.argsort(current_feature)
             sortted_feature = current_feature[sortted_indice]
             feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
+            if feature_range < self.EPSILON:
                 continue
 
             split_point = 0
@@ -478,7 +481,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
                 
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
                 if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
@@ -582,7 +585,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
             sortted_indice = np.argsort(current_feature)
             sortted_feature = current_feature[sortted_indice]
             feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
+            if feature_range < self.EPSILON:
                 continue
 
             split_point = 0
@@ -594,7 +597,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
                 
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
                 if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):

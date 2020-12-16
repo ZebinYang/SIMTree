@@ -9,7 +9,7 @@ from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning
 simplefilter("ignore", category=ConvergenceWarning)
 
-EPSILON = 1e-7
+
 __all__ = ["MOBGLMRegressor", "MOBGLMClassifier"]
 
 
@@ -60,7 +60,7 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
             sortted_indice = np.argsort(current_feature)
             sortted_feature = current_feature[sortted_indice]
             feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
+            if feature_range < self.EPSILON:
                 continue
 
             split_point = 0
@@ -72,7 +72,7 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
 
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
                 if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
@@ -159,7 +159,7 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
             sortted_indice = np.argsort(current_feature)
             sortted_feature = current_feature[sortted_indice]
             feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
+            if feature_range < self.EPSILON:
                 continue
 
             split_point = 0
@@ -171,7 +171,7 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
 
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
                 if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):

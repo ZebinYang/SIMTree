@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.base import RegressorMixin, ClassifierMixin
 from .mob import BaseMOBRegressor, BaseMOBClassifier
 
-EPSILON = 1e-7
+
 __all__ = ["CARTRegressor", "CARTClassifier"]
 
 
@@ -47,7 +47,7 @@ class CARTRegressor(BaseMOBRegressor, RegressorMixin):
             sortted_indice = np.argsort(current_feature)
             sortted_feature = current_feature[sortted_indice]
             feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
+            if feature_range < self.EPSILON:
                 continue
 
             sum_left = 0
@@ -61,7 +61,7 @@ class CARTRegressor(BaseMOBRegressor, RegressorMixin):
                 if i == (n_samples - 1):
                     continue
 
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
@@ -131,7 +131,7 @@ class CARTClassifier(BaseMOBClassifier, ClassifierMixin):
             sortted_indice = np.argsort(current_feature)
             sortted_feature = current_feature[sortted_indice]
             feature_range = sortted_feature[-1] - sortted_feature[0]
-            if feature_range < EPSILON:
+            if feature_range < self.EPSILON:
                 continue
 
             sum_left = 0
@@ -144,7 +144,7 @@ class CARTClassifier(BaseMOBClassifier, ClassifierMixin):
                 if i == (n_samples - 1):
                     continue
 
-                if sortted_feature[i + 1] <= sortted_feature[i] + EPSILON:
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):

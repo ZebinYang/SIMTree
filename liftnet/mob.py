@@ -9,7 +9,7 @@ from sklearn.utils import check_X_y, column_or_1d
 from sklearn.utils.validation import check_is_fitted
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin, is_classifier, is_regressor
 
-EPSILON = 1e-7
+
 __all__ = ["BaseMOBRegressor", "BaseMOBClassifier"]
 
 
@@ -28,6 +28,7 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
 
+        self.EPSILON = 1e-7
         self.random_state = random_state
 
     def _validate_hyperparameters(self):
@@ -375,7 +376,7 @@ class BaseMOBClassifier(BaseMOB, ClassifierMixin):
         """
 
         with np.errstate(divide="ignore", over="ignore"):
-            pred = np.clip(pred, EPSILON, 1. - EPSILON)
+            pred = np.clip(pred, self.EPSILON, 1. - self.EPSILON)
             loss = - np.average(label * np.log(pred) + (1 - label) * np.log(1 - pred), axis=0)
         return loss
 
