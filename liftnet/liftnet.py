@@ -31,19 +31,17 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
                  n_split_grid=10, split_features=None, n_feature_search=1,
                  degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
 
-        self.max_depth = max_depth
-        self.n_split_grid = n_split_grid
-        self.split_features = split_features
-        self.n_feature_search = n_feature_search
-        self.min_samples_leaf = min_samples_leaf
-        self.min_impurity_decrease = min_impurity_decrease
-
+        super(BaseMOB, self).__init__(max_depth=max_depth,
+                                 min_samples_leaf=min_samples_leaf,
+                                 min_impurity_decrease=min_impurity_decrease,
+                                 split_features=split_features,
+                                 random_state=random_state)
         self.degree = degree
         self.knot_num = knot_num
         self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
-
-        self.random_state = random_state
+        self.n_split_grid = n_split_grid
+        self.n_feature_search = n_feature_search
 
     def _validate_hyperparameters(self):
 

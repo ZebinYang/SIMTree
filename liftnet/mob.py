@@ -20,10 +20,9 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, random_state=0):
+                 split_features=None, random_state=0):
 
         self.max_depth = max_depth
-        self.n_split_grid = n_split_grid
         self.split_features = split_features
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
@@ -296,12 +295,11 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
 class BaseMOBRegressor(BaseMOB, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, random_state=0):
+                 split_features=None, random_state=0):
 
         super(BaseMOBRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
-                                 n_split_grid=n_split_grid,
                                  split_features=split_features,
                                  random_state=random_state)
 
@@ -335,12 +333,11 @@ class BaseMOBRegressor(BaseMOB, RegressorMixin):
 class BaseMOBClassifier(BaseMOB, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, random_state=0):
+                 split_features=None, random_state=0):
 
         super(BaseMOBClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
-                                 n_split_grid=n_split_grid,
                                  split_features=split_features,
                                  random_state=random_state)
 

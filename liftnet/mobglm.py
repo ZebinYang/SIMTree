@@ -24,6 +24,7 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
                                  random_state=random_state)
+        self.n_split_grid = n_split_grid
 
     def build_root(self):
 
@@ -115,9 +116,9 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
         super(MOBGLMClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
-                                 n_split_grid=n_split_grid,
                                  split_features=split_features,
                                  random_state=random_state)
+        self.n_split_grid = n_split_grid
 
     def build_root(self):
 
