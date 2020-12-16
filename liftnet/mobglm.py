@@ -21,7 +21,6 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
         super(MOBGLMRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
-                                 n_split_grid=n_split_grid,
                                  split_features=split_features,
                                  random_state=random_state)
         self.n_split_grid = n_split_grid
