@@ -125,8 +125,8 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
         check_is_fitted(self, "sm_")
         x = x.copy()
-        # x[x < self.xmin] = self.xmin
-        # x[x > self.xmax] = self.xmax
+        x[x < self.xmin] = self.xmin
+        x[x > self.xmax] = self.xmax
         if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
             pred = self.sm_ * np.ones(x.shape[0])
         else:
