@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.base import RegressorMixin, ClassifierMixin
-from .mob import BaseMoBTreeRegressor, BaseMoBTreeClassifier
+from .mobtree import BaseMoBTreeRegressor, BaseMoBTreeClassifier
 
 
 __all__ = ["CARTRegressor", "CARTClassifier"]
