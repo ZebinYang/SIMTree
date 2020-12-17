@@ -10,10 +10,10 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin, is_classifier, is_regressor
 
 
-__all__ = ["BaseMOBRegressor", "BaseMOBClassifier"]
+__all__ = ["BaseMoBTreeRegressor", "BaseMoBTreeClassifier"]
 
 
-class BaseMOB(BaseEstimator, metaclass=ABCMeta):
+class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
     """
         Base class for classification and regression.
      """
@@ -292,12 +292,12 @@ class BaseMOB(BaseEstimator, metaclass=ABCMeta):
         return pred
 
 
-class BaseMOBRegressor(BaseMOB, RegressorMixin):
+class BaseMoBTreeRegressor(BaseMoBTree, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_features=None, random_state=0):
 
-        super(BaseMOBRegressor, self).__init__(max_depth=max_depth,
+        super(BaseMoBTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
@@ -330,12 +330,12 @@ class BaseMOBRegressor(BaseMOB, RegressorMixin):
         return self.decision_function(x)
 
     
-class BaseMOBClassifier(BaseMOB, ClassifierMixin):
+class BaseMoBTreeClassifier(BaseMoBTree, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_features=None, random_state=0):
 
-        super(BaseMOBClassifier, self).__init__(max_depth=max_depth,
+        super(BaseMoBTreeClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,

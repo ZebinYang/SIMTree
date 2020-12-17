@@ -1,12 +1,12 @@
 import numpy as np
 from sklearn.base import RegressorMixin, ClassifierMixin
-from .mob import BaseMOBRegressor, BaseMOBClassifier
+from .mob import BaseMoBTreeRegressor, BaseMoBTreeClassifier
 
 
 __all__ = ["CARTRegressor", "CARTClassifier"]
 
 
-class CARTRegressor(BaseMOBRegressor, RegressorMixin):
+class CARTRegressor(BaseMoBTreeRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_features=None, random_state=0):
@@ -63,8 +63,12 @@ class CARTRegressor(BaseMOBRegressor, RegressorMixin):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
-                    continue
+                if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
+                        continue
+                else:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
+                        continue
 
                 current_impurity = (sq_sum_total / n_samples - (sum_left / n_left) ** 2 * n_left / n_samples -
                              ((sum_total - sum_left) / n_right) ** 2 * n_right / n_samples)
@@ -85,7 +89,7 @@ class CARTRegressor(BaseMOBRegressor, RegressorMixin):
         return node
 
 
-class CARTClassifier(BaseMOBClassifier, ClassifierMixin):
+class CARTClassifier(BaseMoBTreeClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_features=None, random_state=0):
@@ -145,8 +149,12 @@ class CARTClassifier(BaseMOBClassifier, ClassifierMixin):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
-                    continue
+                if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
+                        continue
+                else:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
+                        continue
 
                 left_impurity = 0
                 right_impurity = 0

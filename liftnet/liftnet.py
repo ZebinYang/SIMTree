@@ -12,7 +12,7 @@ from sklearn.metrics import make_scorer, roc_auc_score, mean_squared_error
 from sklearn.base import RegressorMixin, ClassifierMixin, is_regressor, is_classifier
 
 from .sim import SimRegressor, SimClassifier
-from .mob import BaseMOB, BaseMOBRegressor, BaseMOBClassifier
+from .mobtree import BaseMoBTree, BaseMoBTreeRegressor, BaseMoBTreeClassifier
 
 from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning
@@ -21,14 +21,14 @@ simplefilter("ignore", category=ConvergenceWarning)
 __all__ = ["LIFTNetRegressor", "LIFTNetClassifier"]
 
 
-class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
+class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
     """
         Base LIFTNet class for classification and regression.
      """
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0.0001,
-                 n_split_grid=10, split_features=None, n_feature_search=1,
-                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
+                 n_split_grid=10, split_features=None, n_feature_search=5,
+                 degree=3, knot_num=5, reg_lambda=0.001, reg_gamma=0.000001, random_state=0):
 
         super(BaseLIFTNet, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -164,8 +164,12 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
-                    continue
+                if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
+                        continue
+                else:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
+                        continue
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
@@ -407,10 +411,11 @@ class BaseLIFTNet(BaseMOB, metaclass=ABCMeta):
                 fig.savefig("%s.eps" % save_path, bbox_inches="tight", dpi=100)
 
 
-class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
+class LIFTNetRegressor(BaseLIFTNet, BaseMoBTreeRegressor, RegressorMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None, n_feature_search=1,
-                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
+                 n_split_grid=10, split_features=None, n_feature_search=5,
+                 degree=3, knot_num=5, reg_lambda=0.001, reg_gamma=0.000001, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -481,8 +486,12 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
-                    continue
+                if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
+                        continue
+                else:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
+                        continue
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
@@ -518,10 +527,11 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMOBRegressor, RegressorMixin):
         return node
 
 
-class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
+class LIFTNetClassifier(BaseLIFTNet, BaseMoBTreeClassifier, ClassifierMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, n_split_grid=10, split_features=None, n_feature_search=1,
-                 degree=3, knot_num=5, reg_lambda=0.1, reg_gamma=0.1, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
+                 n_split_grid=10, split_features=None, n_feature_search=5,
+                 degree=3, knot_num=5, reg_lambda=0.001, reg_gamma=0.000001, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -597,8 +607,12 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMOBClassifier, ClassifierMixin):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
-                    continue
+                if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
+                        continue
+                else:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
+                        continue
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]

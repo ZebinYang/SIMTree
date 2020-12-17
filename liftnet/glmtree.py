@@ -3,22 +3,22 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression, LassoCV, LogisticRegression, LogisticRegressionCV
 from sklearn.base import RegressorMixin, ClassifierMixin
 
-from .mob import BaseMOBRegressor, BaseMOBClassifier
+from .mobtree import BaseMoBTreeRegressor, BaseMoBTreeClassifier
 
 from warnings import simplefilter
 from sklearn.exceptions import ConvergenceWarning
 simplefilter("ignore", category=ConvergenceWarning)
 
 
-__all__ = ["MOBGLMRegressor", "MOBGLMClassifier"]
+__all__ = ["GLMTreeRegressor", "GLMTreeClassifier"]
 
 
-class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
+class GLMTreeRegressor(BaseMoBTreeRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, random_state=0):
 
-        super(MOBGLMRegressor, self).__init__(max_depth=max_depth,
+        super(GLMTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
@@ -75,8 +75,12 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
-                    continue
+                if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
+                        continue
+                else:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
+                        continue
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
@@ -107,12 +111,12 @@ class MOBGLMRegressor(BaseMOBRegressor, RegressorMixin):
         return node
 
 
-class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
+class GLMTreeClassifier(BaseMoBTreeClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  n_split_grid=10, split_features=None, random_state=0):
 
-        super(MOBGLMClassifier, self).__init__(max_depth=max_depth,
+        super(GLMTreeClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
@@ -174,8 +178,12 @@ class MOBGLMClassifier(BaseMOBClassifier, ClassifierMixin):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                if (i + 1 - self.min_samples_leaf) < 1 / self.n_split_grid * (split_point + 1) * (n_samples - 2 * self.min_samples_leaf):
-                    continue
+                if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
+                        continue
+                else:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
+                        continue
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
