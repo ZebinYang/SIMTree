@@ -125,7 +125,7 @@ class GLMTreeClassifier(BaseMoBTreeClassifier, ClassifierMixin):
 
     def build_root(self):
 
-        root_clf = LogisticRegression(penalty='none', max_iter=2000, random_state=self.random_state)
+        root_clf = LogisticRegression(penalty='none', random_state=self.random_state)
         root_clf.fit(self.x, self.y.ravel())
         root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
         return root_impurity
@@ -190,7 +190,7 @@ class GLMTreeClassifier(BaseMoBTreeClassifier, ClassifierMixin):
                 if node_y[left_indice].std() == 0:
                     left_impurity = 0
                 else:
-                    left_clf = LogisticRegression(penalty='none', max_iter=2000, random_state=self.random_state)
+                    left_clf = LogisticRegression(penalty='none', random_state=self.random_state)
                     left_clf.fit(node_x[left_indice], node_y[left_indice].ravel())
                     left_impurity = self.get_loss(node_y[left_indice].ravel(), left_clf.predict_proba(node_x[left_indice])[:, 1])
 
@@ -198,7 +198,7 @@ class GLMTreeClassifier(BaseMoBTreeClassifier, ClassifierMixin):
                 if node_y[right_indice].std() == 0:
                     right_impurity = 0
                 else:
-                    right_clf = LogisticRegression(penalty='none', max_iter=2000, random_state=self.random_state)
+                    right_clf = LogisticRegression(penalty='none', random_state=self.random_state)
                     right_clf.fit(node_x[right_indice], node_y[right_indice].ravel())
                     right_impurity = self.get_loss(node_y[right_indice].ravel(), right_clf.predict_proba(node_x[right_indice])[:, 1])
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
