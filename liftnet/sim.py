@@ -136,7 +136,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         fig.add_subplot(ax1_density)
 
         ax2 = plt.Subplot(fig, outer[1])
-        if len(self.beta_) <= 20:
+        if len(self.beta_) <= 50:
             ax2.barh(np.arange(len(self.beta_)), [beta for beta in self.beta_.ravel()][::-1])
             ax2.set_yticks(np.arange(len(self.beta_)))
             ax2.set_yticklabels(["X" + str(idx + 1) for idx in range(len(self.beta_.ravel()))][::-1])
