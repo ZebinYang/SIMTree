@@ -78,9 +78,11 @@ class GLMTreeRegressor(BaseMoBTreeRegressor, RegressorMixin):
                 if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
                     if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
                         continue
-                else:
+                elif n_samples > 2 * self.min_samples_leaf:
                     if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
                         continue
+                elif (i + 1) != self.min_samples_leaf:
+                    continue
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
@@ -181,9 +183,11 @@ class GLMTreeClassifier(BaseMoBTreeClassifier, ClassifierMixin):
                 if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
                     if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
                         continue
-                else:
+                elif n_samples > 2 * self.min_samples_leaf:
                     if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
                         continue
+                elif (i + 1) != self.min_samples_leaf:
+                    continue
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
