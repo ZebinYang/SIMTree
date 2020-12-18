@@ -79,7 +79,7 @@ class CARTRegressor(BaseMoBTreeRegressor, RegressorMixin):
                     best_position = i + 1
                     best_feature = feature_indice
                     best_impurity = current_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+                    best_threshold = (sortted_feature[best_position] + sortted_feature[best_position + 1]) / 2
 
         sortted_indice = np.argsort(node_x[:, best_feature])
         best_left_indice = sample_indice[sortted_indice[:best_position]]
@@ -174,7 +174,7 @@ class CARTClassifier(BaseMoBTreeClassifier, ClassifierMixin):
                     best_position = i + 1
                     best_feature = feature_indice
                     best_impurity = current_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+                    best_threshold = (sortted_feature[best_position] + sortted_feature[best_position + 1]) / 2
 
         if best_position is not None:
             sortted_indice = np.argsort(node_x[:, best_feature])

@@ -183,28 +183,27 @@ class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
                 if deviation > max_deviation:
                     pos = i + 1
                     max_deviation = deviation
-                    threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
 
             if max_deviation > 0:
                 left_indice = sample_indice[sortted_indice[:pos]]
                 right_indice = sample_indice[sortted_indice[pos:]]
                 if is_regressor(self):
-                    left_clf = SimRegressor(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                    left_clf = SimRegressor(reg_lambda=0, reg_gamma=1e-6, degree=self.degree,
                                     knot_num=self.knot_num, random_state=self.random_state)
                     left_clf.fit(self.x[left_indice], self.y[left_indice])
 
-                    right_clf = SimRegressor(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                    right_clf = SimRegressor(reg_lambda=0, reg_gamma=1e-6, degree=self.degree,
                                      knot_num=self.knot_num, random_state=self.random_state)
                     right_clf.fit(self.x[right_indice], self.y[right_indice])
 
                     left_impurity = self.get_loss(self.y[left_indice].ravel(), left_clf.predict(self.x[left_indice]))
                     right_impurity = self.get_loss(self.y[right_indice].ravel(), right_clf.predict(self.x[right_indice]))
                 if is_classifier(self):
-                    left_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                    left_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-6, degree=self.degree,
                                     knot_num=self.knot_num, random_state=self.random_state)
                     left_clf.fit(self.x[left_indice], self.y[left_indice])
 
-                    right_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                    right_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-6, degree=self.degree,
                                      knot_num=self.knot_num, random_state=self.random_state)
                     right_clf.fit(self.x[right_indice], self.y[right_indice])
 
@@ -519,7 +518,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMoBTreeRegressor, RegressorMixin):
                     best_impurity = current_impurity
                     best_left_impurity = left_impurity
                     best_right_impurity = right_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+                    best_threshold = (sortted_feature[best_position] + sortted_feature[best_position + 1]) / 2
 
         if best_position is not None:
             sortted_indice = np.argsort(node_x[:, best_feature])
@@ -642,7 +641,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMoBTreeClassifier, ClassifierMixin):
                     best_impurity = current_impurity
                     best_left_impurity = left_impurity
                     best_right_impurity = right_impurity
-                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+                    best_threshold = (sortted_feature[best_position] + sortted_feature[best_position + 1]) / 2
 
         if best_position is not None:
             sortted_indice = np.argsort(node_x[:, best_feature])
