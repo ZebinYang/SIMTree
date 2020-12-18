@@ -551,7 +551,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMoBTreeClassifier, ClassifierMixin):
 
     def build_root(self):
 
-        root_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+        root_clf = SimClassifier(reg_lambda=0, reg_gamma=1e-6, degree=self.degree,
                          knot_num=self.knot_num, random_state=self.random_state)
         root_clf.fit(self.x, self.y)
         root_impurity = self.get_loss(self.y, root_clf.predict_proba(self.x)[:, 1])
@@ -622,14 +622,14 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMoBTreeClassifier, ClassifierMixin):
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
-                estimator = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                estimator = SimClassifier(reg_lambda=0, reg_gamma=1e-6, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[left_indice], node_y[left_indice])
                 left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict_proba(node_x[left_indice])[:, 1])
 
                 right_indice = sortted_indice[(i + 1):]
-                estimator = SimClassifier(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                estimator = SimClassifier(reg_lambda=0, reg_gamma=1e-6, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[right_indice], node_y[right_indice])
