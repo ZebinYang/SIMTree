@@ -34,7 +34,7 @@ class GLMTreeRegressor(BaseMoBTreeRegressor, RegressorMixin):
 
     def build_leaf(self, sample_indice):
 
-        best_estimator = LassoCV(n_alphas=10, cv=5, n_jobs=-1)
+        best_estimator = LassoCV(n_alphas=10, cv=5)
         best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
@@ -137,7 +137,7 @@ class GLMTreeClassifier(BaseMoBTreeClassifier, ClassifierMixin):
             best_estimator = None
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
-            best_estimator = LogisticRegressionCV(Cs=10, penalty="l1", solver="liblinear", cv=5, max_iter=2000, n_jobs=-1)
+            best_estimator = LogisticRegressionCV(Cs=10, penalty="l1", solver="liblinear", cv=5, max_iter=2000)
             best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
             predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
             best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
