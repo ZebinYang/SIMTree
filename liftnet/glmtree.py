@@ -102,7 +102,7 @@ class GLMTreeRegressor(BaseMoBTreeRegressor, RegressorMixin):
                     best_impurity = current_impurity
                     best_left_impurity = left_impurity
                     best_right_impurity = right_impurity
-                    best_threshold = (sortted_feature[best_position] + sortted_feature[best_position + 1]) / 2
+                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
 
         if best_position is not None:
             sortted_indice = np.argsort(node_x[:, best_feature])
@@ -213,7 +213,7 @@ class GLMTreeClassifier(BaseMoBTreeClassifier, ClassifierMixin):
                     best_impurity = current_impurity
                     best_left_impurity = left_impurity
                     best_right_impurity = right_impurity
-                    best_threshold = (sortted_feature[best_position] + sortted_feature[best_position + 1]) / 2
+                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
 
         if best_position is not None:
             sortted_indice = np.argsort(node_x[:, best_feature])

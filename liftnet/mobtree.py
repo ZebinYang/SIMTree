@@ -278,7 +278,7 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
         for row in x:
             node = self.tree[1]
             while not node['is_leaf']:
-                if row[node['feature']] < node['threshold']:
+                if row[node['feature']] <= node['threshold']:
                     node = self.tree[node['left_child_id']]
                 else:
                     node = self.tree[node['right_child_id']]
