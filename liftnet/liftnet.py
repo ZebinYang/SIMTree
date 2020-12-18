@@ -499,14 +499,14 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMoBTreeRegressor, RegressorMixin):
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
-                estimator = SimRegressor(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                estimator = SimRegressor(reg_lambda=0, reg_gamma=1e-3, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[left_indice], node_y[left_indice])
                 left_impurity = self.get_loss(node_y[left_indice].ravel(), estimator.predict(node_x[left_indice]))
 
                 right_indice = sortted_indice[(i + 1):]
-                estimator = SimRegressor(reg_lambda=0, reg_gamma=1e-9, degree=self.degree,
+                estimator = SimRegressor(reg_lambda=0, reg_gamma=1e-3, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
                 estimator.fit(node_x[right_indice], node_y[right_indice])
