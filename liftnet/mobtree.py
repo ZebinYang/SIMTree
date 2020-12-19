@@ -96,8 +96,8 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
         self.tree = {}
         self.node_count = 0
         self.leaf_estimators_ = {}
-        n_samples = x.shape[0]
-        self.n_features = x.shape[1]
+        n_samples, n_features = x.shape
+        self.n_features = n_features
         sample_indice = np.arange(n_samples)
         self.x, self.y = self._validate_input(x, y)
         self._validate_hyperparameters()
