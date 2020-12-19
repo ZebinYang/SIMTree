@@ -69,7 +69,7 @@ class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
             if len(self.feature_names) != self.n_features:
                 raise ValueError("feature_names must have the same length as n_features, got %s." % self.feature_names)
         else:
-            self.feature_names = ["x" + str(i + 1) for i in range(self.n_features)]
+            self.feature_names = ["X" + str(i + 1) for i in range(self.n_features)]
 
         if not isinstance(self.n_feature_search, int):
             raise ValueError("n_feature_search must be an integer, got %s." % self.n_feature_search)
