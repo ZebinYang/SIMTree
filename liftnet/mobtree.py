@@ -20,12 +20,13 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_features=None, random_state=0):
+                 split_features=None, feature_names=None, random_state=0):
 
         self.max_depth = max_depth
         self.split_features = split_features
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
+        self.feature_names = feature_names
 
         self.EPSILON = 1e-7
         self.random_state = random_state
@@ -34,7 +35,6 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
 
         if not isinstance(self.max_depth, int):
             raise ValueError("degree must be an integer, got %s." % self.max_depth)
-
             if self.max_depth < 0:
                 raise ValueError("degree must be >= 0, got %s." % self.max_depth)
 
@@ -51,6 +51,13 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
 
         if self.min_impurity_decrease < 0.:
             raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
+        
+        if self.feature_names is not None:
+            self.feature_names = list(self.feature_names)
+            if len(self.feature_names) != self.n_features:
+                raise ValueError("feature_names must have the same length as n_features, got %s." % self.feature_names)
+        else:
+            self.feature_names = ["x" + str(i + 1) for i in range(self.n_features)]
 
     @abstractmethod
     def build_root(self):
@@ -181,21 +188,23 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
                                                  + "\nMean: " + str(np.round(item["value"], 3))})
             else:
                 if is_regressor(self):
+                    
+                    
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
-                                           "label": "____Node " + str(item["node_id"]) + "____" +
-                                                "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3))
-                                                + "\nMSE: " + str(np.round(item["impurity"], 3))
-                                                + "\nSize: " + str(int(item["n_samples"]))
-                                                + "\nMean: " + str(np.round(item["value"], 3))})
+                                           "label": "____Node " + str(item["node_id"]) + "____"
+                                        + "\n" + self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3))
+                                        + "\nMSE: " + str(np.round(item["impurity"], 3))
+                                        + "\nSize: " + str(int(item["n_samples"]))
+                                        + "\nMean: " + str(np.round(item["value"], 3))})
                 elif is_classifier(self):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
                                            "label": "____Node " + str(item["node_id"]) + "____" +
-                                                "\nX" + str(item["feature"] + 1) + " <=" + str(np.round(item["threshold"], 3))
-                                                + "\nCEntropy: " + str(np.round(item["impurity"], 3))
-                                                + "\nSize: " + str(int(item["n_samples"]))
-                                                + "\nMean: " + str(np.round(item["value"], 3))})
+                                        + "\n" + self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3))
+                                        + "\nCEntropy: " + str(np.round(item["impurity"], 3))
+                                        + "\nSize: " + str(int(item["n_samples"]))
+                                        + "\nMean: " + str(np.round(item["value"], 3))})
 
                 pending_node_list.append(self.tree[item["left_child_id"]])
                 pending_node_list.append(self.tree[item["right_child_id"]])
@@ -295,12 +304,13 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
 class BaseMoBTreeRegressor(BaseMoBTree, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_features=None, random_state=0):
+                 split_features=None, feature_names=None, random_state=0):
 
         super(BaseMoBTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
+                                 feature_names=feature_names,
                                  random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -333,12 +343,13 @@ class BaseMoBTreeRegressor(BaseMoBTree, RegressorMixin):
 class BaseMoBTreeClassifier(BaseMoBTree, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_features=None, random_state=0):
+                 split_features=None, feature_names=None, random_state=0):
 
         super(BaseMoBTreeClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
+                                 feature_names=feature_names,
                                  random_state=random_state)
 
     def _validate_input(self, x, y):

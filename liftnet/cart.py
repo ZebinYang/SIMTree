@@ -9,12 +9,13 @@ __all__ = ["CARTRegressor", "CARTClassifier"]
 class CARTRegressor(BaseMoBTreeRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_features=None, random_state=0):
+                 split_features=None, feature_names=None, random_state=0):
 
         super(CARTRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
+                                 feature_names=feature_names,
                                  random_state=random_state)
 
     def build_root(self):
@@ -94,12 +95,13 @@ class CARTRegressor(BaseMoBTreeRegressor, RegressorMixin):
 class CARTClassifier(BaseMoBTreeClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_features=None, random_state=0):
+                 split_features=None, feature_names=None, random_state=0):
 
         super(CARTClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
+                                 feature_names=feature_names,
                                  random_state=random_state)
 
     def build_root(self):

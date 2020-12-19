@@ -27,13 +27,14 @@ class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
      """
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, n_feature_search=5,
+                 n_split_grid=10, split_features=None, feature_names=None, n_feature_search=5,
                  degree=3, knot_num=5, reg_lambda=0.001, reg_gamma=0.000001, random_state=0):
 
         super(BaseLIFTNet, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
+                                 feature_names=feature_names,
                                  random_state=random_state)
         self.degree = degree
         self.knot_num = knot_num
@@ -51,21 +52,30 @@ class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
 
         if self.split_features is not None:
             if not isinstance(self.split_features, list):
-                raise ValueError("split_features must be an list or None, got %s." % self.split_features)
+                raise ValueError("split_features must be an list or None, got %s." %
+                         self.split_features)
+
+        if not isinstance(self.min_samples_leaf, int):
+            raise ValueError("min_samples_leaf must be an integer, got %s." % self.min_samples_leaf)
+
+            if self.min_samples_leaf < 0:
+                raise ValueError("min_samples_leaf must be >= 0, got %s." % self.min_samples_leaf)
+
+        if self.min_impurity_decrease < 0.:
+            raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
+        
+        if self.feature_names is not None:
+            self.feature_names = list(self.feature_names)
+            if len(self.feature_names) != self.n_features:
+                raise ValueError("feature_names must have the same length as n_features, got %s." % self.feature_names)
+        else:
+            self.feature_names = ["x" + str(i + 1) for i in range(self.n_features)]
 
         if not isinstance(self.n_feature_search, int):
             raise ValueError("n_feature_search must be an integer, got %s." % self.n_feature_search)
             if self.n_feature_search <= 0:
                 raise ValueError("n_feature_search must be > 0, got %s." % self.n_feature_search)
                 
-        if not isinstance(self.min_samples_leaf, int):
-            raise ValueError("min_samples_leaf must be an integer, got %s." % self.min_samples_leaf)
-            if self.min_samples_leaf < 0:
-                raise ValueError("min_samples_leaf must be >= 0, got %s." % self.min_samples_leaf)
-
-        if self.min_impurity_decrease < 0.:
-            raise ValueError("min_impurity_decrease must be >= 0, got %s." % self.min_impurity_decrease)
-
         if not isinstance(self.degree, int):
             raise ValueError("degree must be an integer, got %s." % self.degree)
             if self.degree < 0:
@@ -274,7 +284,7 @@ class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
         if len(est.beta_) <= 50:
             ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
             ax2.set_yticks(np.arange(len(est.beta_)))
-            ax2.set_yticklabels(["X" + str(idx + 1) for idx in range(len(est.beta_.ravel()))][::-1])
+            ax2.set_yticklabels([self.feature_names[idx] for idx in range(len(est.beta_.ravel()))][::-1])
             ax2.set_xlim(xlim_min, xlim_max)
             ax2.set_ylim(-1, len(est.beta_))
             ax2.axvline(0, linestyle="dotted", color="black")
@@ -285,7 +295,7 @@ class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
 
             ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
             ax2.set_yticks(input_ticks)
-            ax2.set_yticklabels(["X" + str(idx + 1) for idx in input_ticks][::-1])
+            ax2.set_yticklabels([self.feature_names[idx] for idx in input_ticks][::-1])
             ax2.set_xlim(xlim_min, xlim_max)
             ax2.set_ylim(-1, len(est.beta_))
             ax2.axvline(0, linestyle="dotted", color="black")
@@ -294,7 +304,7 @@ class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
         sortind = np.argsort(np.abs(est.beta_).ravel())[::-1]
         for i in range(est.beta_.shape[0]):
             if i == 0:
-                ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + "X" + str(sortind[i] + 1)
+                ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
                 continue
             elif (i > 0) & (i < 3):
                 if np.abs(est.beta_[sortind[i], 0]) > 0.001:
@@ -302,7 +312,7 @@ class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
                         ax2title += " + "
                     else:
                         ax2title += " - "
-                    ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + "X" + str(sortind[i] + 1)
+                    ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
                 else:
                     break
             elif i == 3:
@@ -415,7 +425,7 @@ class BaseLIFTNet(BaseMoBTree, metaclass=ABCMeta):
 class LIFTNetRegressor(BaseLIFTNet, BaseMoBTreeRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, n_feature_search=5,
+                 n_split_grid=10, split_features=None, feature_names=None, n_feature_search=5,
                  degree=3, knot_num=5, reg_lambda=0.001, reg_gamma=0.000001, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
@@ -423,6 +433,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMoBTreeRegressor, RegressorMixin):
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
+                                 feature_names=feature_names,
                                  n_feature_search=n_feature_search,
                                  degree=degree,
                                  knot_num=knot_num,
@@ -533,7 +544,7 @@ class LIFTNetRegressor(BaseLIFTNet, BaseMoBTreeRegressor, RegressorMixin):
 class LIFTNetClassifier(BaseLIFTNet, BaseMoBTreeClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 n_split_grid=10, split_features=None, n_feature_search=5,
+                 n_split_grid=10, split_features=None, feature_names=None, n_feature_search=5,
                  degree=3, knot_num=5, reg_lambda=0.001, reg_gamma=0.000001, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
@@ -541,6 +552,7 @@ class LIFTNetClassifier(BaseLIFTNet, BaseMoBTreeClassifier, ClassifierMixin):
                                  min_impurity_decrease=min_impurity_decrease,
                                  n_split_grid=n_split_grid,
                                  split_features=split_features,
+                                 feature_names=feature_names,
                                  n_feature_search=n_feature_search,
                                  degree=degree,
                                  knot_num=knot_num,
