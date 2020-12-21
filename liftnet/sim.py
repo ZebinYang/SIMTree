@@ -9,6 +9,7 @@ from sklearn.utils import check_X_y, column_or_1d
 from sklearn.model_selection import train_test_split
 from sklearn.utils.validation import check_is_fitted
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin, is_classifier, is_regressor
+from sklearn.linear_model import LinearRegression, LassoCV, LogisticRegression, LogisticRegressionCV
 
 from abc import ABCMeta, abstractmethod
 from .smspline import SMSplineRegressor, SMSplineClassifier
@@ -45,12 +46,22 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             the normalized projection inidce
         """
 
-        self.mu = np.average(x, axis=0)
-        self.cov = np.cov(x.T)
-        self.inv_cov = np.linalg.pinv(self.cov, 1e-7)
-        s1 = np.dot(self.inv_cov, (x - self.mu).T).T
-        zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
-        zbar[np.abs(zbar * x.std(0)) < self.reg_lambda * np.max(np.abs(zbar * x.std(0)))] = 0
+#         self.mu = np.average(x, axis=0)
+#         self.cov = np.cov(x.T)
+#         self.inv_cov = np.linalg.pinv(self.cov, 1e-7)
+#         s1 = np.dot(self.inv_cov, (x - self.mu).T).T
+#         zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
+#         zbar[np.abs(zbar * x.std(0)) < self.reg_lambda * np.max(np.abs(zbar * x.std(0)))] = 0
+        if self.reg_lambda == 0:
+            mu = np.average(x, axis=0)
+            cov = np.cov(x.T)
+            inv_cov = np.linalg.pinv(cov, 1e-7)
+            s1 = np.dot(inv_cov, (x - mu).T).T
+            zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
+        else:
+            estimator = LassoCV(n_alphas=10, cv=5, normalize=True)
+            estimator.fit(x, y)
+            zbar = best_estimator.coef_
         if np.linalg.norm(zbar) > 0:
             beta = zbar / np.linalg.norm(zbar)
         else:
@@ -175,7 +186,7 @@ class SimRegressor(BaseSim, RegressorMixin):
     degree : int, optional. default=3
         The order of the spline. Possible values include 1 and 3.
 
-    knot_num : int, optional. default=10
+    knot_num : int, optional. default=5
         Number of knots
 
     random_state : int, optional. default=0
@@ -259,7 +270,7 @@ class SimClassifier(BaseSim, ClassifierMixin):
     degree : int, optional. default=3
         The order of the spline
 
-    knot_num : int, optional. default=10
+    knot_num : int, optional. default=5
         Number of knots
 
     random_state : int, optional. default=0

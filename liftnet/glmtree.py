@@ -37,7 +37,7 @@ class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
 
     def build_leaf(self, sample_indice):
 
-        best_estimator = LassoCV(n_alphas=10, cv=5)
+        best_estimator = LassoCV(n_alphas=10, cv=5, normalize=True)
         best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
