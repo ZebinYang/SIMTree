@@ -1,12 +1,12 @@
 import numpy as np
 from sklearn.base import RegressorMixin, ClassifierMixin
-from .mobtree import BaseMoBTreeRegressor, BaseMoBTreeClassifier
+from .mobtree import MoBTreeRegressor, MoBTreeClassifier
 
 
 __all__ = ["CARTRegressor", "CARTClassifier"]
 
 
-class CARTRegressor(BaseMoBTreeRegressor, RegressorMixin):
+class CARTRegressor(MoBTreeRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_features=None, feature_names=None, random_state=0):
@@ -92,7 +92,7 @@ class CARTRegressor(BaseMoBTreeRegressor, RegressorMixin):
         return node
 
 
-class CARTClassifier(BaseMoBTreeClassifier, ClassifierMixin):
+class CARTClassifier(MoBTreeClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
                  split_features=None, feature_names=None, random_state=0):

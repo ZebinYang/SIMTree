@@ -79,7 +79,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         self.beta_ = self._first_order_thres(x, y)
 
         if len(self.beta_[np.abs(self.beta_) > 0]) > 0:
-            if (self.beta_[np.abs(self.beta_) > 0][0] < 0):
+            if (self.beta_[np.argmax(np.abs(self.beta_))] < 0):
                 self.beta_ = - self.beta_
         xb = np.dot(x, self.beta_)
         self._estimate_shape(xb, y, np.min(xb), np.max(xb))

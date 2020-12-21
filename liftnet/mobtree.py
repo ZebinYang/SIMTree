@@ -10,24 +10,26 @@ from sklearn.utils.validation import check_is_fitted
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin, is_classifier, is_regressor
 
 
-__all__ = ["BaseMoBTreeRegressor", "BaseMoBTreeClassifier"]
+__all__ = ["MoBTreeRegressor", "MoBTreeClassifier"]
 
 
-class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
+class MoBTree(BaseEstimator, metaclass=ABCMeta):
     """
         Base class for classification and regression.
      """
 
     @abstractmethod
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_features=None, feature_names=None, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, random_state=0):
 
         self.max_depth = max_depth
         self.split_features = split_features
         self.min_samples_leaf = min_samples_leaf
         self.min_impurity_decrease = min_impurity_decrease
         self.feature_names = feature_names
-
+        self.n_screen_grid = n_screen_grid
+        self.n_feature_search = n_feature_search
+        self.n_split_grid = n_split_grid
         self.EPSILON = 1e-7
         self.random_state = random_state
 
@@ -57,7 +59,22 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
             if len(self.feature_names) != self.n_features:
                 raise ValueError("feature_names must have the same length as n_features, got %s." % self.feature_names)
         else:
-            self.feature_names = ["x" + str(i + 1) for i in range(self.n_features)]
+            self.feature_names = ["X" + str(i + 1) for i in range(self.n_features)]
+
+        if not isinstance(self.n_feature_search, int):
+            raise ValueError("n_feature_search must be an integer, got %s." % self.n_feature_search)
+            if self.n_feature_search <= 0:
+                raise ValueError("n_feature_search must be > 0, got %s." % self.n_feature_search)
+
+        if not isinstance(self.n_split_grid, int):
+            raise ValueError("n_split_grid must be an integer, got %s." % self.n_split_grid)
+            if self.n_split_grid <= 0:
+                raise ValueError("n_split_grid must be > 0, got %s." % self.n_split_grid)
+
+        if not isinstance(self.n_screen_grid, int):
+            raise ValueError("n_screen_grid must be an integer, got %s." % self.n_screen_grid)
+            if self.n_screen_grid <= 0:
+                raise ValueError("n_screen_grid must be > 0, got %s." % self.n_screen_grid)
 
     @abstractmethod
     def build_root(self):
@@ -66,6 +83,138 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
     @abstractmethod
     def build_leaf(self, sample_indice):
         pass
+
+    def screen_features(self, sample_indice):
+
+        node_x = self.x[sample_indice]
+        node_y = self.y[sample_indice]
+        n_samples, n_features = node_x.shape
+
+        feature_impurity = []
+        for feature_indice in self.split_features:
+
+            current_feature = node_x[:, feature_indice]
+            sortted_indice = np.argsort(current_feature)
+            sortted_feature = current_feature[sortted_indice]
+            feature_range = sortted_feature[-1] - sortted_feature[0]
+            if feature_range < self.EPSILON:
+                continue
+
+            split_point = 0
+            for i, _ in enumerate(sortted_indice):
+
+                if i == (n_samples - 1):
+                    continue
+
+                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                    continue
+
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
+                    continue
+
+                if self.min_samples_leaf < n_samples / (self.n_screen_grid - 1):
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_screen_grid + 1):
+                        continue
+                elif n_samples > 2 * self.min_samples_leaf:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_screen_grid - 1):
+                        continue
+                elif (i + 1) != self.min_samples_leaf:
+                    continue
+
+                split_point += 1
+                left_indice = sortted_indice[:(i + 1)]
+                right_indice = sortted_indice[(i + 1):]
+                self.base_estimator.fit(self.x[left_indice], self.y[left_indice])
+                left_impurity = self.evaluate_estimator(self.base_estimator, self.x[left_indice], self.y[left_indice].ravel())
+
+                self.base_estimator.fit(self.x[right_indice], self.y[right_indice])
+                right_impurity = self.evaluate_estimator(self.base_estimator, self.x[right_indice], self.y[right_indice].ravel())
+                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+                feature_impurity.append(current_impurity)
+        split_feature_indices = np.argsort(feature_impurity)[:self.n_feature_search]
+        important_split_features = np.array(self.split_features)[split_feature_indices]
+        return important_split_features
+
+    def node_split(self, sample_indice):
+
+        node_x = self.x[sample_indice]
+        node_y = self.y[sample_indice]
+        n_samples, n_features = node_x.shape
+
+        best_feature = None
+        best_position = None
+        best_threshold = None
+        best_left_indice = None
+        best_right_indice = None
+        best_impurity = np.inf
+        best_left_impurity = np.inf
+        best_right_impurity = np.inf
+        if self.n_feature_search > len(self.split_features):
+            important_split_features = self.split_features
+        else:
+            important_split_features = self.screen_features(sample_indice)
+        for feature_indice in important_split_features:
+
+            current_feature = node_x[:, feature_indice]
+            sortted_indice = np.argsort(current_feature)
+            sortted_feature = current_feature[sortted_indice]
+            feature_range = sortted_feature[-1] - sortted_feature[0]
+            if feature_range < self.EPSILON:
+                continue
+
+            split_point = 0
+            for i, _ in enumerate(sortted_indice):
+
+                if i == (n_samples - 1):
+                    continue
+
+                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                    continue
+                
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
+                    continue
+
+                if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
+                        continue
+                elif n_samples > 2 * self.min_samples_leaf:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
+                        continue
+                elif (i + 1) != self.min_samples_leaf:
+                    continue
+
+                split_point += 1
+                left_indice = sortted_indice[:(i + 1)]
+                if node_y[left_indice].std() == 0:
+                    left_impurity = 0
+                else:
+                    self.base_estimator.fit(node_x[left_indice], node_y[left_indice])
+                    left_impurity = self.evaluate_estimator(self.base_estimator, self.x[left_indice], self.y[left_indice].ravel())
+
+                right_indice = sortted_indice[(i + 1):]
+                if node_y[right_indice].std() == 0:
+                    right_impurity = 0
+                else:
+                    self.base_estimator.fit(node_x[right_indice], node_y[right_indice])
+                    right_impurity = self.evaluate_estimator(self.base_estimator, self.x[right_indice], self.y[right_indice].ravel())
+
+                current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
+                if current_impurity < best_impurity:
+                    best_position = i + 1
+                    best_feature = feature_indice
+                    best_impurity = current_impurity
+                    best_left_impurity = left_impurity
+                    best_right_impurity = right_impurity
+                    best_threshold = (sortted_feature[i] + sortted_feature[i + 1]) / 2
+
+        if best_position is not None:
+            sortted_indice = np.argsort(node_x[:, best_feature])
+            best_left_indice = sample_indice[sortted_indice[:best_position]]
+            best_right_indice = sample_indice[sortted_indice[best_position:]]
+
+        node = {"feature": best_feature, "threshold": best_threshold, "left": best_left_indice, "right": best_right_indice,
+              "impurity": best_impurity, "left_impurity": best_left_impurity, "right_impurity": best_right_impurity}
+        return node
 
     def add_node(self, parent_id, is_left, is_leaf, depth, feature, threshold, impurity, sample_indice):
 
@@ -303,16 +452,19 @@ class BaseMoBTree(BaseEstimator, metaclass=ABCMeta):
         return pred
 
 
-class BaseMoBTreeRegressor(BaseMoBTree, RegressorMixin):
+class MoBTreeRegressor(MoBTree, RegressorMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_features=None, feature_names=None, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, random_state=0):
 
-        super(BaseMoBTreeRegressor, self).__init__(max_depth=max_depth,
+        super(MoBTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
                                  feature_names=feature_names,
+                                 n_screen_grid=n_screen_grid,
+                                 n_feature_search=n_feature_search,
+                                 n_split_grid=n_split_grid,
                                  random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -327,7 +479,7 @@ class BaseMoBTreeRegressor(BaseMoBTree, RegressorMixin):
         Parameters
         ---------
         label : array-like of shape (n_samples,)
-            containing the input dataset
+            containing the response dataset
         pred : array-like of shape (n_samples,)
             containing the output dataset
         Returns
@@ -338,20 +490,43 @@ class BaseMoBTreeRegressor(BaseMoBTree, RegressorMixin):
         loss = np.average((label - pred) ** 2, axis=0)
         return loss
 
+    def evaluate_estimator(self, estimator, x, y):
+
+        """method to calculate the MSE loss
+
+        Parameters
+        ---------
+        estimator : the base model object
+        x : array-like of shape (n_samples, n_features)
+            containing the input dataset
+        y : array-like of shape (n_samples,)
+            containing the response dataset
+        Returns
+        -------
+        float
+            the MSE loss
+        """
+        pred = estimator.predict(x)
+        loss = self.get_loss(y, pred)
+        return loss
+
     def predict(self, x):
         return self.decision_function(x)
 
     
-class BaseMoBTreeClassifier(BaseMoBTree, ClassifierMixin):
+class MoBTreeClassifier(MoBTree, ClassifierMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
-                 split_features=None, feature_names=None, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, random_state=0):
 
-        super(BaseMoBTreeClassifier, self).__init__(max_depth=max_depth,
+        super(MoBTreeClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
                                  min_impurity_decrease=min_impurity_decrease,
                                  split_features=split_features,
                                  feature_names=feature_names,
+                                 n_screen_grid=n_screen_grid,
+                                 n_feature_search=n_feature_search,
+                                 n_split_grid=n_split_grid,
                                  random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -388,6 +563,26 @@ class BaseMoBTreeClassifier(BaseMoBTree, ClassifierMixin):
         with np.errstate(divide="ignore", over="ignore"):
             pred = np.clip(pred, self.EPSILON, 1. - self.EPSILON)
             loss = - np.average(label * np.log(pred) + (1 - label) * np.log(1 - pred), axis=0)
+        return loss
+
+    def evaluate_estimator(self, estimator, x, y):
+
+        """method to calculate the cross entropy loss
+
+        Parameters
+        ---------
+        estimator : the base model object
+        x : array-like of shape (n_samples, n_features)
+            containing the input dataset
+        y : array-like of shape (n_samples,)
+            containing the response dataset
+        Returns
+        -------
+        float
+            the cross entropy loss
+        """
+        pred = estimator.predict_proba(x)[:, 1]
+        loss = self.get_loss(y, pred)
         return loss
 
     def predict_proba(self, x):
