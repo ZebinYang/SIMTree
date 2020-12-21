@@ -101,6 +101,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 continue
 
             split_point = 0
+            best_impurity = np.inf
             for i, _ in enumerate(sortted_indice):
 
                 if i == (n_samples - 1):
@@ -127,14 +128,14 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     left_impurity = 0
                 else:
                     self.base_estimator.fit(node_x[left_indice], node_y[left_indice])
-                    left_impurity = self.evaluate_estimator(self.base_estimator, self.x[left_indice], self.y[left_indice].ravel())
+                    left_impurity = self.evaluate_estimator(self.base_estimator, node_x[left_indice], node_y[left_indice].ravel())
 
                 right_indice = sortted_indice[(i + 1):]
                 if node_y[right_indice].std() == 0:
                     right_impurity = 0
                 else:
                     self.base_estimator.fit(node_x[right_indice], node_y[right_indice])
-                    right_impurity = self.evaluate_estimator(self.base_estimator, self.x[right_indice], self.y[right_indice].ravel())
+                    right_impurity = self.evaluate_estimator(self.base_estimator, node_x[right_indice], node_y[right_indice].ravel())
 
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
                 if current_impurity < best_impurity:
@@ -198,14 +199,14 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     left_impurity = 0
                 else:
                     self.base_estimator.fit(node_x[left_indice], node_y[left_indice])
-                    left_impurity = self.evaluate_estimator(self.base_estimator, self.x[left_indice], self.y[left_indice].ravel())
+                    left_impurity = self.evaluate_estimator(self.base_estimator, node_x[left_indice], node_y[left_indice].ravel())
 
                 right_indice = sortted_indice[(i + 1):]
                 if node_y[right_indice].std() == 0:
                     right_impurity = 0
                 else:
                     self.base_estimator.fit(node_x[right_indice], node_y[right_indice])
-                    right_impurity = self.evaluate_estimator(self.base_estimator, self.x[right_indice], self.y[right_indice].ravel())
+                    right_impurity = self.evaluate_estimator(self.base_estimator, node_x[right_indice], node_y[right_indice].ravel())
 
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
                 if current_impurity < best_impurity:
