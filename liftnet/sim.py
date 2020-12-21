@@ -9,7 +9,7 @@ from sklearn.utils import check_X_y, column_or_1d
 from sklearn.model_selection import train_test_split
 from sklearn.utils.validation import check_is_fitted
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin, is_classifier, is_regressor
-from sklearn.linear_model import LinearRegression, LassoCV, LogisticRegression, LogisticRegressionCV
+from sklearn.linear_model import LinearRegression, Lasso, LogisticRegression, LogisticRegressionCV
 
 from abc import ABCMeta, abstractmethod
 from .smspline import SMSplineRegressor, SMSplineClassifier
@@ -59,7 +59,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             s1 = np.dot(inv_cov, (x - mu).T).T
             zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
         else:
-            estimator = LassoCV(n_alphas=10, cv=5, normalize=True)
+            estimator = Lasso(alphas=self.reg_lambda)
             estimator.fit(x, y)
             zbar = estimator.coef_
         if np.linalg.norm(zbar) > 0:
