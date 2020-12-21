@@ -38,7 +38,7 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
         self.knot_num = knot_num
         self.degree = degree
-        self.reg_gamma = reg_gamma
+        self.reg_gamma = reg_gamma if isinstance(reg_gamma, list) else [reg_gamma]
         self.xmin = xmin
         self.xmax = xmax
 
@@ -147,7 +147,7 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
 
     Parameters
     ----------
-    knot_num : int, optional. default=10
+    knot_num : int, optional. default=5
            the number of knots
 
     degree : int, optional. default=3
@@ -267,7 +267,7 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
 
     Parameters
     ----------
-    knot_num : int, optional. default=10
+    knot_num : int, optional. default=5
            the number of knots
 
     degree : int, optional. default=3
