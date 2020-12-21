@@ -61,7 +61,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         else:
             estimator = LassoCV(n_alphas=10, cv=5, normalize=True)
             estimator.fit(x, y)
-            zbar = best_estimator.coef_
+            zbar = estimator.coef_
         if np.linalg.norm(zbar) > 0:
             beta = zbar / np.linalg.norm(zbar)
         else:
