@@ -30,7 +30,7 @@ class CustomMobTreeRegressor(MoBTreeRegressor, RegressorMixin):
                                  random_state=random_state)
         self.param_dict = param_dict
         self.base_estimator = base_estimator
-        if "random_state" in self.base_estimator.get_params().keys()
+        if "random_state" in self.base_estimator.get_params().keys():
             self.base_estimator.set_params(**{"random_state": self.random_state})
         self.base_estimator.set_params(**kargs)
 
@@ -68,7 +68,7 @@ class CustomMobTreeClassifier(MoBTreeClassifier, RegressorMixin):
                                  random_state=random_state)
         self.param_dict = param_dict
         self.base_estimator = base_estimator
-        if "random_state" in self.base_estimator.get_params().keys()
+        if "random_state" in self.base_estimator.get_params().keys():
             self.base_estimator.set_params(**{"random_state": self.random_state})
         self.base_estimator.set_params(**kargs)
 
