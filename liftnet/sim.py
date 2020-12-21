@@ -59,7 +59,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             s1 = np.dot(inv_cov, (x - mu).T).T
             zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
         else:
-            estimator = Lasso(alphas=self.reg_lambda)
+            estimator = Lasso(alpha=self.reg_lambda)
             estimator.fit(x, y)
             zbar = estimator.coef_
         if np.linalg.norm(zbar) > 0:
