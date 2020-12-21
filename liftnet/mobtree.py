@@ -349,8 +349,6 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                                                  + "\nMean: " + str(np.round(item["value"], 3))})
             else:
                 if is_regressor(self):
-                    
-                    
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
                                            "label": "____Node " + str(item["node_id"]) + "____"
@@ -361,7 +359,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 elif is_classifier(self):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
-                                           "label": "____Node " + str(item["node_id"]) + "____" +
+                                           "label": "____Node " + str(item["node_id"]) + "____"
                                         + "\n" + self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3))
                                         + "\nCEntropy: " + str(np.round(item["impurity"], 3))
                                         + "\nSize: " + str(int(item["n_samples"]))
