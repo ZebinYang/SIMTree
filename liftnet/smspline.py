@@ -233,7 +233,7 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
                    "y": y.ravel(),
                    "nknots": self.knot_num,
                    "type": "lin" if self.degree==1 else "cub",
-                   "lambdas": ro.r("c")(np.array(self.reg_lambda)),
+                   "lambdas": ro.r("c")(np.array(self.reg_gamma)),
                    "rparm": 0.01}
             self.sm_ = bigsplines.bigspline(**kwargs)
         return self
@@ -363,15 +363,17 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
                     kwargs = {"formula": Formula('y ~ x'),
                            "family": "binomial",
                            "nknots": self.knot_num, 
-                           "lambdas": ro.r("c")(np.array(self.reg_lambda)),
+                           "lambdas": ro.r("c")(np.array(self.reg_gamma)),
                            "rparm": 0.01,
                            "type": "lin" if self.degree==1 else "cub",
                            "data": pd.DataFrame({"x": x.ravel(), "y": y.ravel()})}
                     self.sm_ = bigsplines.bigssg(**kwargs)
                     exit = True
                 except rpy2.rinterface_lib.embedded.RRuntimeError:
-                    
-                    self.reg_gamma = self.reg_gamma * 10
+                    if isinstance(self.reg_gamma, list):
+                        self.reg_gamma = [v * 10 for v in self.reg_gamma]
+                    else:
+                        self.reg_gamma = self.reg_gamma * 10
         return self
 
     def predict_proba(self, x):
