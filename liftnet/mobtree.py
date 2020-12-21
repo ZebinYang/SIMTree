@@ -123,14 +123,23 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
-                right_indice = sortted_indice[(i + 1):]
-                self.base_estimator.fit(self.x[left_indice], self.y[left_indice])
-                left_impurity = self.evaluate_estimator(self.base_estimator, self.x[left_indice], self.y[left_indice].ravel())
+                if node_y[left_indice].std() == 0:
+                    left_impurity = 0
+                else:
+                    self.base_estimator.fit(node_x[left_indice], node_y[left_indice])
+                    left_impurity = self.evaluate_estimator(self.base_estimator, self.x[left_indice], self.y[left_indice].ravel())
 
-                self.base_estimator.fit(self.x[right_indice], self.y[right_indice])
-                right_impurity = self.evaluate_estimator(self.base_estimator, self.x[right_indice], self.y[right_indice].ravel())
+                right_indice = sortted_indice[(i + 1):]
+                if node_y[right_indice].std() == 0:
+                    right_impurity = 0
+                else:
+                    self.base_estimator.fit(node_x[right_indice], node_y[right_indice])
+                    right_impurity = self.evaluate_estimator(self.base_estimator, self.x[right_indice], self.y[right_indice].ravel())
+
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
-                feature_impurity.append(current_impurity)
+                if current_impurity < best_impurity:
+                    best_impurity = current_impurity
+            feature_impurity.append(best_impurity)
         split_feature_indices = np.argsort(feature_impurity)[:self.n_feature_search]
         important_split_features = np.array(self.split_features)[split_feature_indices]
         return important_split_features
