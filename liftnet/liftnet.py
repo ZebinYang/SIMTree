@@ -62,11 +62,10 @@ class LIFTNet(metaclass=ABCMeta):
             for val in self.reg_lambda:
                 if val < 0:
                     raise ValueError("all the elements in reg_lambda must be >= 0, got %s." % self.reg_lambda)
-            self.reg_lambda_list = self.reg_lambda
         elif (isinstance(self.reg_lambda, float)) or (isinstance(self.reg_lambda, int)):
             if (self.reg_lambda < 0) or (self.reg_lambda > 1):
                 raise ValueError("reg_lambda must be >= 0 and <=1, got %s." % self.reg_lambda)
-            self.reg_lambda_list = [self.reg_lambda]
+            self.reg_lambda = [self.reg_lambda]
         else:
             raise ValueError("Invalid reg_lambda")
 
@@ -74,11 +73,10 @@ class LIFTNet(metaclass=ABCMeta):
             for val in self.reg_gamma:
                 if val < 0:
                     raise ValueError("all the elements in reg_gamma must be >= 0, got %s." % self.reg_gamma)
-            self.reg_gamma_list = self.reg_gamma
         elif (isinstance(self.reg_gamma, float)) or (isinstance(self.reg_gamma, int)):
             if (self.reg_gamma < 0) or (self.reg_gamma > 1):
                 raise ValueError("reg_gamma must be >= 0 and <=1, got %s." % self.reg_gamma)
-            self.reg_gamma_list = [self.reg_gamma]
+            self.reg_gamma = [self.reg_gamma]
         else:
             raise ValueError("Invalid reg_gamma")
 
@@ -297,7 +295,7 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
                                  reg_gamma=reg_gamma,
                                  random_state=random_state)
 
-        self.base_estimator = SimRegressor(reg_lambda=0, reg_gamma=self.reg_gamma_list, degree=self.degree,
+        self.base_estimator = SimRegressor(reg_lambda=0, reg_gamma=self.reg_gamma, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
 
@@ -309,9 +307,9 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
 
     def build_leaf(self, sample_indice):
 
-        base = SimRegressor(reg_gamma=self.reg_gamma_list,
+        base = SimRegressor(reg_gamma=self.reg_gamma,
                       degree=self.degree, knot_num=self.knot_num, random_state=self.random_state)
-        grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda_list},
+        grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda},
                       scoring={"mse": make_scorer(mean_squared_error, greater_is_better=False)},
                       cv=5, refit="mse", n_jobs=1, error_score=np.nan)
         grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
@@ -341,7 +339,7 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
                                  reg_gamma=reg_gamma,
                                  random_state=random_state)
 
-        self.base_estimator = SimClassifier(reg_lambda=0, reg_gamma=self.reg_gamma_list, degree=self.degree,
+        self.base_estimator = SimClassifier(reg_lambda=0, reg_gamma=self.reg_gamma, degree=self.degree,
                                  knot_num=self.knot_num,
                                  random_state=self.random_state)
 
@@ -358,9 +356,9 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
             best_estimator = None
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
-            base = SimClassifier(reg_gamma=self.reg_gamma_list,
+            base = SimClassifier(reg_gamma=self.reg_gamma,
                           degree=self.degree, knot_num=self.knot_num, random_state=self.random_state)
-            grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda_list},
+            grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda},
                           scoring={"auc": make_scorer(roc_auc_score, needs_proba=True)},
                           cv=5, refit="auc", n_jobs=1, error_score=np.nan)
             grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
