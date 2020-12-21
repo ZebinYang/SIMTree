@@ -20,7 +20,7 @@ __all__ = ["SimRegressor", "SimClassifier"]
 class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
 
         self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
@@ -169,7 +169,7 @@ class SimRegressor(BaseSim, RegressorMixin):
     reg_lambda : float, optional. default=0.1
         Sparsity penalty strength
 
-    reg_gamma : float, optional. default=0.1
+    reg_gamma : float or list of float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
 
     degree : int, optional. default=3
@@ -182,7 +182,7 @@ class SimRegressor(BaseSim, RegressorMixin):
         Random seed
     """
 
-    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
 
         super(SimRegressor, self).__init__(reg_lambda=reg_lambda,
                                 reg_gamma=reg_gamma,
@@ -253,7 +253,7 @@ class SimClassifier(BaseSim, ClassifierMixin):
     reg_lambda : float, optional. default=0.1
         Sparsity penalty strength
 
-    reg_gamma : float, optional. default=0.1
+    reg_gamma : float or list of float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
 
     degree : int, optional. default=3
@@ -266,7 +266,7 @@ class SimClassifier(BaseSim, ClassifierMixin):
         Random seed
     """
 
-    def __init__(self, reg_lambda=0.1, reg_gamma=0.1, knot_num=10, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
 
         super(SimClassifier, self).__init__(reg_lambda=reg_lambda,
                                 reg_gamma=reg_gamma,

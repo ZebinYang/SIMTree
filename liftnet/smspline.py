@@ -34,7 +34,7 @@ __all__ = ["SMSplineRegressor", "SMSplineClassifier"]
 class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, knot_num=10, degree=3, reg_gamma=0.1, xmin=-1, xmax=1):
+    def __init__(self, knot_num=5, degree=3, reg_gamma=1e-5, xmin=-1, xmax=1):
 
         self.knot_num = knot_num
         self.degree = degree
@@ -153,8 +153,8 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
     degree : int, optional. default=3
           the order of the spline, possible values include 1 and 3
 
-    reg_gamma : float, optional. default=0.1
-            the roughness penalty strength of the spline algorithm, range from 0 to 1; it can also be set to "GCV".
+    reg_gamma : float or list of float, optional. default=0.1
+            the roughness penalty strength of the spline algorithm, range from 0 to 1.
 
     xmin : float, optional. default=-1
         the min boundary of the input
@@ -163,7 +163,7 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
         the max boundary of the input
     """
 
-    def __init__(self, knot_num=10, degree=3, reg_gamma=0.1, xmin=-1, xmax=1):
+    def __init__(self, knot_num=5, degree=3, reg_gamma=1e-5, xmin=-1, xmax=1):
 
         super(SMSplineRegressor, self).__init__(knot_num=knot_num,
                                   degree=degree,
@@ -233,7 +233,7 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
                    "y": y.ravel(),
                    "nknots": self.knot_num,
                    "type": "lin" if self.degree==1 else "cub",
-                   "lambdas": self.reg_gamma,
+                   "lambdas": ro.r("c")(np.array(self.reg_lambda)),
                    "rparm": 0.01}
             self.sm_ = bigsplines.bigspline(**kwargs)
         return self
@@ -273,8 +273,8 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
     degree : int, optional. default=3
           the order of the spline, possible values include 1 and 3
 
-    reg_gamma : float, optional. default=0.1
-            the roughness penalty strength of the spline algorithm, range from 0 to 1; it can also be set to "GCV".
+    reg_gamma : float or list of float, optional. default=0.1
+            the roughness penalty strength of the spline algorithm, range from 0 to 1.
 
     xmin : float, optional. default=-1
         the min boundary of the input
@@ -283,7 +283,7 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
         the max boundary of the input
     """
 
-    def __init__(self, knot_num=10, degree=3, reg_gamma=0.1, xmin=-1, xmax=1):
+    def __init__(self, knot_num=5, degree=3, reg_gamma=1e-5, xmin=-1, xmax=1):
 
         super(SMSplineClassifier, self).__init__(knot_num=knot_num,
                                   degree=degree,
@@ -357,25 +357,21 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
             p = np.clip(np.mean(y), EPSILON, 1. - EPSILON)
             self.sm_ = np.log(p / (1 - p))
         else:
-            i = 0
             exit = False
             while not exit:
                 try:
                     kwargs = {"formula": Formula('y ~ x'),
                            "family": "binomial",
                            "nknots": self.knot_num, 
-                           "lambdas": self.reg_gamma,
+                           "lambdas": ro.r("c")(np.array(self.reg_lambda)),
                            "rparm": 0.01,
                            "type": "lin" if self.degree==1 else "cub",
                            "data": pd.DataFrame({"x": x.ravel(), "y": y.ravel()})}
                     self.sm_ = bigsplines.bigssg(**kwargs)
                     exit = True
                 except rpy2.rinterface_lib.embedded.RRuntimeError:
-                    if not isinstance(self.reg_gamma, str):
-                        self.reg_gamma = 10 ** (i - 9)
-                    else:
-                        break
-                    i += 1
+                    
+                    self.reg_gamma = self.reg_gamma * 10
         return self
 
     def predict_proba(self, x):
