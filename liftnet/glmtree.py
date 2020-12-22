@@ -16,7 +16,7 @@ __all__ = ["GLMTreeRegressor", "GLMTreeClassifier"]
 class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, random_state=0):
+                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, reg_lambda=0, random_state=0):
 
         super(GLMTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -27,6 +27,7 @@ class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
                                  n_feature_search=n_feature_search,
                                  n_split_grid=n_split_grid,
                                  random_state=random_state)
+        self.reg_lambda = reg_lambda
         self.base_estimator = LinearRegression()
 
     def build_root(self):
@@ -37,7 +38,7 @@ class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
 
     def build_leaf(self, sample_indice):
 
-        best_estimator = LassoCV(n_alphas=10, cv=5, random_state=self.random_state)
+        best_estimator = LassoCV(alphas=self.reg_lambda, cv=5, normalize=True, random_state=self.random_state)
         best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
@@ -47,7 +48,7 @@ class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
 class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, random_state=0):
+                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, reg_lambda=0, random_state=0):
 
         super(GLMTreeClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -58,6 +59,7 @@ class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
                                  n_feature_search=n_feature_search,
                                  n_split_grid=n_split_grid,
                                  random_state=random_state)
+        self.reg_lambda = reg_lambda
         self.base_estimator = LogisticRegression(penalty='none', random_state=self.random_state)
 
     def build_root(self):
@@ -73,9 +75,12 @@ class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
             best_estimator = None
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
-            best_estimator = LogisticRegressionCV(Cs=10, penalty="l1", solver="liblinear",
+            best_estimator = LogisticRegressionCV(Cs=self.reg_lambda, penalty="l1", solver="liblinear",
                                       cv=5, max_iter=1000, random_state=self.random_state)
-            best_estimator.fit(self.x[sample_indice], self.y[sample_indice])
-            predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
-            best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
+            mx = self.x[sample_indice].mean(0)
+            sx = self.x[sample_indice].std(0)
+            nx = (self.x[sample_indice] - mx) / sx
+            best_estimator.fit(nx, self.y[sample_indice])
+            predict_func = lambda x: best_estimator.predict_proba((x - mx) / sx)[:, 1]
+            best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(nx)[:, 1])
         return predict_func, best_estimator, best_impurity
