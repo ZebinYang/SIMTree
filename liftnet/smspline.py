@@ -34,13 +34,14 @@ __all__ = ["SMSplineRegressor", "SMSplineClassifier"]
 class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, knot_num=5, degree=3, reg_gamma=1e-5, xmin=-1, xmax=1):
+    def __init__(self, knot_num=5, degree=3, reg_gamma=1e-5, xmin=-1, xmax=1, clip_predict=True):
 
         self.knot_num = knot_num
         self.degree = degree
         self.reg_gamma = reg_gamma if isinstance(reg_gamma, list) else [reg_gamma]
         self.xmin = xmin
         self.xmax = xmax
+        self.clip_predict = clip_predict
 
     def _estimate_density(self, x):
 
@@ -125,8 +126,9 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
         check_is_fitted(self, "sm_")
         x = x.copy()
-        x[x < self.xmin] = self.xmin
-        x[x > self.xmax] = self.xmax
+        if self.clip_predict:
+            x[x < self.xmin] = self.xmin
+            x[x > self.xmax] = self.xmax
         if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
             pred = self.sm_ * np.ones(x.shape[0])
         else:
@@ -161,15 +163,19 @@ class SMSplineRegressor(BaseSMSpline, RegressorMixin):
 
     xmax : float, optional. default=1
         the max boundary of the input
+        
+    clip_predict : bool, optional. default=True
+        whether to do clipping for new data outside xmin and xmax (jsut for prediction)
     """
 
-    def __init__(self, knot_num=5, degree=3, reg_gamma=1e-5, xmin=-1, xmax=1):
+    def __init__(self, knot_num=5, degree=3, reg_gamma=1e-5, xmin=-1, xmax=1, clip_predict=True):
 
         super(SMSplineRegressor, self).__init__(knot_num=knot_num,
                                   degree=degree,
                                   reg_gamma=reg_gamma,
                                   xmin=xmin,
-                                  xmax=xmax)
+                                  xmax=xmax,
+                                  clip_predict=clip_predict)
 
     def _validate_input(self, x, y):
 
@@ -281,15 +287,19 @@ class SMSplineClassifier(BaseSMSpline, ClassifierMixin):
 
     xmax : float, optional. default=1
         the max boundary of the input
+
+    clip_predict : bool, optional. default=True
+        whether to do clipping for new data outside xmin and xmax (jsut for prediction)
     """
 
-    def __init__(self, knot_num=5, degree=3, reg_gamma=1e-5, xmin=-1, xmax=1):
+    def __init__(self, knot_num=5, degree=3, reg_gamma=1e-5, xmin=-1, xmax=1, clip_predict=True):
 
         super(SMSplineClassifier, self).__init__(knot_num=knot_num,
                                   degree=degree,
                                   reg_gamma=reg_gamma,
                                   xmin=xmin,
-                                  xmax=xmax)
+                                  xmax=xmax,
+                                  clip_predict=clip_predict)
 
     def get_loss(self, label, pred):
 

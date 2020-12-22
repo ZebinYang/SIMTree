@@ -21,13 +21,13 @@ __all__ = ["SimRegressor", "SimClassifier"]
 class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, clip_predict=True, random_state=0):
 
         self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
         self.knot_num = knot_num
         self.degree = degree
-
+        self.clip_predict = clip_predict
         self.random_state = random_state
 
     def _first_order_thres(self, x, y):
@@ -46,12 +46,6 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             the normalized projection inidce
         """
 
-#         self.mu = np.average(x, axis=0)
-#         self.cov = np.cov(x.T)
-#         self.inv_cov = np.linalg.pinv(self.cov, 1e-7)
-#         s1 = np.dot(self.inv_cov, (x - self.mu).T).T
-#         zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
-#         zbar[np.abs(zbar * x.std(0)) < self.reg_lambda * np.max(np.abs(zbar * x.std(0)))] = 0
         if self.reg_lambda == 0:
             mu = np.average(x, axis=0)
             cov = np.cov(x.T)
@@ -193,12 +187,13 @@ class SimRegressor(BaseSim, RegressorMixin):
         Random seed
     """
 
-    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, clip_predict=True, random_state=0):
 
         super(SimRegressor, self).__init__(reg_lambda=reg_lambda,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 degree=degree,
+                                clip_predict=clip_predict,
                                 random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -234,7 +229,7 @@ class SimRegressor(BaseSim, RegressorMixin):
         """
 
         self.shape_fit_ = SMSplineRegressor(knot_num=self.knot_num, reg_gamma=self.reg_gamma,
-                                xmin=xmin, xmax=xmax, degree=self.degree)
+                                xmin=xmin, xmax=xmax, degree=self.degree, clip_predict=self.clip_predict)
         self.shape_fit_.fit(x, y)
 
     def predict(self, x):
@@ -277,12 +272,13 @@ class SimClassifier(BaseSim, ClassifierMixin):
         Random seed
     """
 
-    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, clip_predict=True, random_state=0):
 
         super(SimClassifier, self).__init__(reg_lambda=reg_lambda,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 degree=degree,
+                                clip_predict=clip_predict,
                                 random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -326,7 +322,7 @@ class SimClassifier(BaseSim, ClassifierMixin):
         """
 
         self.shape_fit_ = SMSplineClassifier(knot_num=self.knot_num, reg_gamma=self.reg_gamma,
-                                xmin=xmin, xmax=xmax, degree=self.degree)
+                                xmin=xmin, xmax=xmax, degree=self.degree, clip_predict=self.clip_predict)
         self.shape_fit_.fit(x, y)
 
     def predict_proba(self, x):

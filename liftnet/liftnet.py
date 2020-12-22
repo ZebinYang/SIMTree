@@ -28,7 +28,7 @@ class LIFTNet(metaclass=ABCMeta):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, random_state=0):
+                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, clip_predict=True, random_state=0):
 
         super(LIFTNet, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -43,6 +43,7 @@ class LIFTNet(metaclass=ABCMeta):
         self.knot_num = knot_num
         self.reg_gamma = reg_gamma
         self.reg_lambda = reg_lambda
+        self.clip_predict = clip_predict
 
     def _validate_hyperparameters(self):
 
@@ -114,7 +115,7 @@ class LIFTNet(metaclass=ABCMeta):
 
         fig = plt.figure(figsize=(10, 4))
         est = self.leaf_estimators_[node_id]
-        outer = gridspec.GridSpec(1, 2, wspace=0.15)
+        outer = gridspec.GridSpec(1, 2, wspace=0.2)
         inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[0], wspace=0.1, hspace=0.1, height_ratios=[6, 1])
         ax1_main = fig.add_subplot(inner[0])
         xgrid = np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 100).reshape([-1, 1])
@@ -137,7 +138,7 @@ class LIFTNet(metaclass=ABCMeta):
         if len(est.beta_) <= 50:
             ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
             ax2.set_yticks(np.arange(len(est.beta_)))
-            ax2.set_yticklabels([self.feature_names[idx] for idx in range(len(est.beta_.ravel()))][::-1])
+            ax2.set_yticklabels([self.feature_names[idx][:5] for idx in range(len(est.beta_.ravel()))][::-1])
             ax2.set_xlim(xlim_min, xlim_max)
             ax2.set_ylim(-1, len(est.beta_))
             ax2.axvline(0, linestyle="dotted", color="black")
@@ -148,7 +149,7 @@ class LIFTNet(metaclass=ABCMeta):
 
             ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
             ax2.set_yticks(input_ticks)
-            ax2.set_yticklabels([self.feature_names[idx] for idx in input_ticks][::-1])
+            ax2.set_yticklabels([self.feature_names[idx][:5] for idx in input_ticks][::-1])
             ax2.set_xlim(xlim_min, xlim_max)
             ax2.set_ylim(-1, len(est.beta_))
             ax2.axvline(0, linestyle="dotted", color="black")
@@ -221,7 +222,7 @@ class LIFTNet(metaclass=ABCMeta):
             if est is None:
                 continue
 
-            inner = outer[subfig_idx].subgridspec(2, 2, wspace=0.15, height_ratios=[6, 1], width_ratios=[3, 1])
+            inner = outer[subfig_idx].subgridspec(2, 2, wspace=0.2, height_ratios=[6, 1], width_ratios=[3, 1])
             ax1_main = fig.add_subplot(inner[0, 0])
             xgrid = np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 100).reshape([-1, 1])
             ygrid = est.shape_fit_.decision_function(xgrid)
@@ -243,7 +244,7 @@ class LIFTNet(metaclass=ABCMeta):
             if len(est.beta_) <= 50:
                 ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
                 ax2.set_yticks(np.arange(len(est.beta_)))
-                ax2.set_yticklabels(["X" + str(idx + 1) for idx in range(len(est.beta_.ravel()))][::-1])
+                ax2.set_yticklabels([self.feature_names[idx][:5] for idx in range(len(est.beta_.ravel()))][::-1])
                 ax2.set_xlim(xlim_min, xlim_max)
                 ax2.set_ylim(-1, len(est.beta_))
                 ax2.axvline(0, linestyle="dotted", color="black")
@@ -254,7 +255,7 @@ class LIFTNet(metaclass=ABCMeta):
 
                 ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
                 ax2.set_yticks(input_ticks)
-                ax2.set_yticklabels(["X" + str(idx + 1) for idx in input_ticks][::-1])
+                ax2.set_yticklabels([self.feature_names[idx][:5] for idx in input_ticks][::-1])
                 ax2.set_xlim(xlim_min, xlim_max)
                 ax2.set_ylim(-1, len(est.beta_))
                 ax2.axvline(0, linestyle="dotted", color="black")
@@ -279,7 +280,7 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, random_state=0):
+                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, clip_predict=True, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -293,10 +294,11 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
+                                 clip_predict=clip_predict,
                                  random_state=random_state)
 
         self.base_estimator = SimRegressor(reg_lambda=0, reg_gamma=self.reg_gamma, degree=self.degree,
-                                 knot_num=self.knot_num,
+                                 knot_num=self.knot_num, clip_predict=self.clip_predict,
                                  random_state=self.random_state)
 
     def build_root(self):
@@ -307,8 +309,8 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
 
     def build_leaf(self, sample_indice):
 
-        base = SimRegressor(reg_gamma=self.reg_gamma,
-                      degree=self.degree, knot_num=self.knot_num, random_state=self.random_state)
+        base = SimRegressor(reg_gamma=self.reg_gamma, degree=self.degree,
+                      knot_num=self.knot_num, clip_predict=self.clip_predict, random_state=self.random_state)
         grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda},
                       scoring={"mse": make_scorer(mean_squared_error, greater_is_better=False)},
                       cv=5, refit="mse", n_jobs=1, error_score=np.nan)
@@ -323,7 +325,7 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, random_state=0):
+                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, clip_predict=True, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -337,10 +339,11 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
+                                 clip_predict=clip_predict,
                                  random_state=random_state)
-
+        
         self.base_estimator = SimClassifier(reg_lambda=0, reg_gamma=self.reg_gamma, degree=self.degree,
-                                 knot_num=self.knot_num,
+                                 knot_num=self.knot_num, clip_predict=self.clip_predict,
                                  random_state=self.random_state)
 
     def build_root(self):
@@ -356,8 +359,8 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
             best_estimator = None
             predict_func = lambda x: np.mean(self.y[sample_indice])
         else:
-            base = SimClassifier(reg_gamma=self.reg_gamma,
-                          degree=self.degree, knot_num=self.knot_num, random_state=self.random_state)
+            base = SimClassifier(reg_gamma=self.reg_gamma, degree=self.degree,
+                          knot_num=self.knot_num, clip_predict=self.clip_predict, random_state=self.random_state)
             grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda},
                           scoring={"auc": make_scorer(roc_auc_score, needs_proba=True)},
                           cv=5, refit="auc", n_jobs=1, error_score=np.nan)
