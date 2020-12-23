@@ -322,7 +322,7 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
             best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice].ravel(),
                                       max_middle_iter=100, n_middle_iter_no_change=5,
                                       max_inner_iter=100, n_inner_iter_no_change=5,
-                                      batch_size=min(0.2 * len(sample_indice), 100))
+                                      batch_size=min(int(0.2 * len(sample_indice)), 100))
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
         return predict_func, best_estimator, best_impurity
@@ -378,7 +378,7 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
                 best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice].ravel(),
                                           max_middle_iter=100, n_middle_iter_no_change=5,
                                           max_inner_iter=100, n_inner_iter_no_change=5,
-                                          batch_size=min(0.2 * len(sample_indice), 100))
+                                          batch_size=min(int(0.2 * len(sample_indice)), 100))
             predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
             best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity
