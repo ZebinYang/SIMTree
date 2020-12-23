@@ -110,6 +110,114 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
         pred = self.shape_fit_.decision_function(xb)
         return pred
 
+    def fit_middle_update_bfgs(self, x, y, proj_mat=None, val_ratio=0.2, tol=0.0001, 
+                      max_middle_iter=100, n_middle_iter_no_change=5, max_inner_iter=100, stratify=True, verbose=False):
+
+        """fine tune the fitted Sim model using inner update method (bfgs)
+
+        Parameters
+        ---------
+        x : array-like of shape (n_samples, n_features)
+            containing the input dataset
+        y : array-like of shape (n_samples,)
+            containing target values
+        proj_mat : array-like of shape (n_features, n_features), optional
+            to project the projection indice for enhancing orthogonality
+        val_ratio : float, optional, default=0.2
+            the split ratio for validation set
+        tol : float, optional, default=0.0001
+            the tolerance for early stopping
+        max_middle_iter : int, optional, default=3
+            the maximal number of middle iteration
+        n_middle_iter_no_change : int, optional, default=3
+            the tolerance of non-improving middle iterations
+        max_inner_iter : int, optional, default=100
+            the maximal number of inner iteration for "adam" optimizer
+        stratify : bool, optional, default=True
+            whether to stratify the target variable when splitting the validation set
+        verbose : bool, optional, default=False
+            whether to show the training history
+        """
+
+        x, y = self._validate_input(x, y)
+        n_samples = x.shape[0]
+
+        if is_regressor(self):
+            idx1, idx2 = train_test_split(np.arange(n_samples),test_size=val_ratio, random_state=self.random_state)
+            tr_x, tr_y, val_x, val_y = x[idx1], y[idx1], x[idx2], y[idx2]
+        elif is_classifier(self):
+            if stratify:
+                idx1, idx2 = train_test_split(np.arange(n_samples),test_size=val_ratio, stratify=y, random_state=self.random_state)
+            else:
+                idx1, idx2 = train_test_split(np.arange(n_samples),test_size=val_ratio, random_state=self.random_state)
+            tr_x, tr_y, val_x, val_y = x[idx1], y[idx1], x[idx2], y[idx2]
+
+        val_xb = np.dot(val_x, self.beta_)
+        if is_regressor(self):
+            val_pred = self.shape_fit_.predict(val_xb)
+            val_loss = self.shape_fit_.get_loss(val_y, val_pred)
+        elif is_classifier(self):
+            val_pred = self.shape_fit_.predict_proba(val_xb)[:, 1]
+            val_loss = self.shape_fit_.get_loss(val_y, val_pred)
+
+        self_copy = deepcopy(self)
+        no_middle_iter_change = 0
+        val_loss_middle_iter_best = val_loss
+        for middle_iter in range(max_middle_iter):
+            
+            theta_0 = self_copy.beta_ 
+            def loss_func(beta):
+                pred = self_copy.shape_fit_.predict(np.dot(tr_x, beta))
+                return self_copy.shape_fit_.get_loss(tr_y, pred)
+
+            def grad(beta):
+                xb = np.dot(tr_x, beta)
+                if is_regressor(self_copy):
+                    r = tr_y - self_copy.shape_fit_.predict(xb)
+                elif is_classifier(self_copy):
+                    r = tr_y - self_copy.shape_fit_.predict_proba(xb)[:, 1]
+                dfxb = self_copy.shape_fit_.diff(xb, order=1)
+                g_t = np.average((- dfxb * r).reshape(-1, 1) * tr_x, axis=0)
+                return g_t
+
+            theta_0 = scipy.optimize.minimize(loss_func, x0=theta_0, jac=grad, method='BFGS', options={'maxiter':max_inner_iter}).x
+            
+            ## thresholding and normalization
+            if proj_mat is not None:
+                theta_0 = np.dot(proj_mat, theta_0)
+
+            theta_0[np.abs(theta_0) < self_copy.reg_lambda * np.max(np.abs(theta_0))] = 0
+            if np.linalg.norm(theta_0) > 0:
+                theta_0 = theta_0 / np.linalg.norm(theta_0)
+                if (theta_0[np.abs(theta_0) > 0][0] < 0):
+                    theta_0 = - theta_0
+
+            # ridge update
+            self_copy.beta_ = theta_0
+            tr_xb = np.dot(tr_x, self_copy.beta_).reshape(-1, 1)
+            self_copy._estimate_shape(tr_xb, tr_y, np.min(tr_xb), np.max(tr_xb))
+            
+            val_xb = np.dot(val_x, self_copy.beta_)
+            if is_regressor(self_copy):
+                val_pred = self_copy.shape_fit_.predict(val_xb)
+                val_loss = self_copy.shape_fit_.get_loss(val_y, val_pred)
+            elif is_classifier(self_copy):
+                val_pred = self_copy.shape_fit_.predict_proba(val_xb)[:, 1]
+                val_loss = self_copy.shape_fit_.get_loss(val_y, val_pred)
+            if verbose:
+                print("Middle iter:", middle_iter + 1, "with validation loss:", np.round(val_loss, 5))
+
+            if val_loss > val_loss_middle_iter_best - tol:
+                no_middle_iter_change += 1
+            else:
+                no_middle_iter_change = 0
+            if val_loss < val_loss_middle_iter_best:
+                self.beta_ = self_copy.beta_
+                self.shape_fit_ = self_copy.shape_fit_
+                val_loss_middle_iter_best = val_loss
+            if no_middle_iter_change >= n_middle_iter_no_change:
+                break
+
     def visualize(self):
 
         """draw the fitted projection indices and ridge function
