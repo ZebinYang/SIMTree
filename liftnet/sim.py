@@ -237,8 +237,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
                 if no_inner_iter_change >= n_inner_iter_no_change:
                     break
   
-            ## thresholding and normalization
-            theta_0[np.abs(theta_0) < self_copy.reg_lambda * np.max(np.abs(theta_0))] = 0
+            ## normalization
             if np.linalg.norm(theta_0) > 0:
                 theta_0 = theta_0 / np.linalg.norm(theta_0)
                 if (theta_0[np.abs(theta_0) > 0][0] < 0):
