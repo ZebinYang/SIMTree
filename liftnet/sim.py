@@ -151,11 +151,10 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             
         x, y = self._validate_input(x, y)
         n_samples = x.shape[0]
-        batch_size = min(batch_size, n_samples)
-
         if is_regressor(self):
             idx1, idx2 = train_test_split(np.arange(n_samples), test_size=val_ratio,
                                           random_state=self.random_state)
+            tr_x, tr_y, val_x, val_y = x[idx1], y[idx1], x[idx2], y[idx2]
         elif is_classifier(self):
             if stratify:
                 idx1, idx2 = train_test_split(np.arange(n_samples),test_size=val_ratio, stratify=y, random_state=self.random_state)
@@ -163,7 +162,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
                 idx1, idx2 = train_test_split(np.arange(n_samples),test_size=val_ratio, random_state=self.random_state)
             tr_x, tr_y, val_x, val_y = x[idx1], y[idx1], x[idx2], y[idx2]
         
-        tr_x, tr_y, val_x, val_y = x[idx1], y[idx1], x[idx2], y[idx2]
+        batch_size = min(batch_size, tr_x.shape[0])
         val_xb = np.dot(val_x, self.beta_)
         if is_regressor(self):
             val_pred = self.shape_fit_.predict(val_xb)
@@ -200,12 +199,12 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
                     xb = np.dot(batch_xx, theta_0)
                     if is_regressor(self_copy):
-                        r = batch_yy - self_copy.shape_fit_.predict(xb)
+                        r = batch_yy - self_copy.shape_fit_.predict(xb).ravel()
                     elif is_classifier(self_copy):
                         r = batch_yy - self_copy.shape_fit_.predict_proba(xb)[:, 1]
                     
                     # gradient
-                    dfxb = self_copy.shape_fit_.diff(xb, order=1)
+                    dfxb = self_copy.shape_fit_.diff(xb, order=1).ravel()
                     g_t = np.average((- dfxb * r).reshape(-1, 1) * batch_xx, axis=0).reshape(-1, 1)
 
                     # update the moving average 
