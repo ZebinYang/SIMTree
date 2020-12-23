@@ -355,9 +355,10 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
     def build_leaf(self, sample_indice):
 
         if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].sum() < 5) | ((1 - self.y[sample_indice]).sum() < 5):
-            best_impurity = 0
             best_estimator = None
-            predict_func = lambda x: np.mean(self.y[sample_indice])
+            p = self.y[sample_indice].mean()
+            predict_func = lambda x: p
+            best_impurity = - p * np.log2(p) - (1 - p) * np.log2((1 - p)) if (p > 0) and (p < 1) else 0
         else:
             base = SimClassifier(reg_gamma=self.reg_gamma, degree=self.degree,
                           knot_num=self.knot_num, clip_predict=self.clip_predict, random_state=self.random_state)
