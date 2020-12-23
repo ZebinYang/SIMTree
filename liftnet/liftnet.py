@@ -317,6 +317,7 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
                       scoring={"mse": make_scorer(mean_squared_error, greater_is_better=False)},
                       cv=5, refit="mse", n_jobs=1, error_score=np.nan)
         grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
+        best_estimator = grid.best_estimator_
         if self.leaf_update:
             best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice].ravel(),
                                       max_middle_iter=100, n_middle_iter_no_change=5,
