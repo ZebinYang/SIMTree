@@ -91,7 +91,7 @@ class CustomMobTreeClassifier(MoBTreeClassifier, RegressorMixin):
 
         if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].sum() < 5) | ((1 - self.y[sample_indice]).sum() < 5):
             best_estimator = None
-            predict_func = lambda x: np.ones(len(sample_indice)) * self.y[sample_indice].mean()
+            predict_func = lambda x: np.ones(x.shape[0]) * self.y[sample_indice].mean()
             best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         else:
             grid = GridSearchCV(self.base_estimator, param_grid=self.param_dict,

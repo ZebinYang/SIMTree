@@ -113,7 +113,7 @@ class CARTClassifier(MoBTreeClassifier, ClassifierMixin):
     def build_leaf(self, sample_indice):
 
         best_estimator = None
-        predict_func = lambda x: np.ones(len(sample_indice)) * self.y[sample_indice].mean()
+        predict_func = lambda x: np.ones(x.shape[0]) * self.y[sample_indice].mean()
         best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         return predict_func, best_estimator, best_impurity
 
