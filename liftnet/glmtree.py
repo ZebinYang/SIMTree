@@ -78,9 +78,8 @@ class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
 
         if (self.y[sample_indice].std() == 0) | (self.y[sample_indice].sum() < 5) | ((1 - self.y[sample_indice]).sum() < 5):
             best_estimator = None
-            p = self.y[sample_indice].mean()
-            predict_func = lambda x: p
-            best_impurity = - p * np.log2(p) - (1 - p) * np.log2((1 - p)) if (p > 0) and (p < 1) else 0
+            predict_func = lambda x: np.ones(len(sample_indice)) * self.y[sample_indice].mean()
+            best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         else:
             best_estimator = LogisticRegressionCV(Cs=self.reg_lambda, penalty="l1", solver="liblinear",
                                       cv=5, max_iter=1000, random_state=self.random_state)

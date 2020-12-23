@@ -421,6 +421,11 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     os.makedirs(folder)
                 fig.savefig("%s.png" % save_path, bbox_inches="tight")
 
+    def decision_path_indice(self, x, node_id):
+
+        sample_indice = np.where(self.decision_path(x)[:, node_id - 1])[0]
+        return sample_indice
+
     def decision_path(self, x):
 
         n_samples = x.shape[0]
