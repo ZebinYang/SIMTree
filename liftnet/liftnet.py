@@ -115,7 +115,7 @@ class LIFTNet(metaclass=ABCMeta):
 
         fig = plt.figure(figsize=(10, 4))
         est = self.leaf_estimators_[node_id]
-        outer = gridspec.GridSpec(1, 2, wspace=0.2)
+        outer = gridspec.GridSpec(1, 2, wspace=0.25)
         inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[0], wspace=0.1, hspace=0.1, height_ratios=[6, 1])
         ax1_main = fig.add_subplot(inner[0])
         xgrid = np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 100).reshape([-1, 1])
@@ -138,7 +138,7 @@ class LIFTNet(metaclass=ABCMeta):
         if len(est.beta_) <= 50:
             ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
             ax2.set_yticks(np.arange(len(est.beta_)))
-            ax2.set_yticklabels([self.feature_names[idx][:5] for idx in range(len(est.beta_.ravel()))][::-1])
+            ax2.set_yticklabels([self.feature_names[idx][:8] for idx in range(len(est.beta_.ravel()))][::-1])
             ax2.set_xlim(xlim_min, xlim_max)
             ax2.set_ylim(-1, len(est.beta_))
             ax2.axvline(0, linestyle="dotted", color="black")
@@ -149,7 +149,7 @@ class LIFTNet(metaclass=ABCMeta):
 
             ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
             ax2.set_yticks(input_ticks)
-            ax2.set_yticklabels([self.feature_names[idx][:5] for idx in input_ticks][::-1])
+            ax2.set_yticklabels([self.feature_names[idx][:8] for idx in input_ticks][::-1])
             ax2.set_xlim(xlim_min, xlim_max)
             ax2.set_ylim(-1, len(est.beta_))
             ax2.axvline(0, linestyle="dotted", color="black")
@@ -158,7 +158,7 @@ class LIFTNet(metaclass=ABCMeta):
         sortind = np.argsort(np.abs(est.beta_).ravel())[::-1]
         for i in range(est.beta_.shape[0]):
             if i == 0:
-                ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
+                ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]][:8]
                 continue
             elif (i > 0) & (i < 3):
                 if np.abs(est.beta_[sortind[i], 0]) > 0.001:
@@ -166,7 +166,7 @@ class LIFTNet(metaclass=ABCMeta):
                         ax2title += " + "
                     else:
                         ax2title += " - "
-                    ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
+                    ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]][:8]
                 else:
                     break
             elif i == 3:
@@ -222,7 +222,7 @@ class LIFTNet(metaclass=ABCMeta):
             if est is None:
                 continue
 
-            inner = outer[subfig_idx].subgridspec(2, 2, wspace=0.2, height_ratios=[6, 1], width_ratios=[3, 1])
+            inner = outer[subfig_idx].subgridspec(2, 2, wspace=0.25, height_ratios=[6, 1], width_ratios=[3, 1])
             ax1_main = fig.add_subplot(inner[0, 0])
             xgrid = np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 100).reshape([-1, 1])
             ygrid = est.shape_fit_.decision_function(xgrid)
@@ -244,7 +244,7 @@ class LIFTNet(metaclass=ABCMeta):
             if len(est.beta_) <= 50:
                 ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
                 ax2.set_yticks(np.arange(len(est.beta_)))
-                ax2.set_yticklabels([self.feature_names[idx][:5] for idx in range(len(est.beta_.ravel()))][::-1])
+                ax2.set_yticklabels([self.feature_names[idx][:8] for idx in range(len(est.beta_.ravel()))][::-1])
                 ax2.set_xlim(xlim_min, xlim_max)
                 ax2.set_ylim(-1, len(est.beta_))
                 ax2.axvline(0, linestyle="dotted", color="black")
@@ -255,7 +255,7 @@ class LIFTNet(metaclass=ABCMeta):
 
                 ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
                 ax2.set_yticks(input_ticks)
-                ax2.set_yticklabels([self.feature_names[idx][:5] for idx in input_ticks][::-1])
+                ax2.set_yticklabels([self.feature_names[idx][:8] for idx in input_ticks][::-1])
                 ax2.set_xlim(xlim_min, xlim_max)
                 ax2.set_ylim(-1, len(est.beta_))
                 ax2.axvline(0, linestyle="dotted", color="black")
