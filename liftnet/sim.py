@@ -1,3 +1,4 @@
+import scipy
 import numpy as np
 from copy import deepcopy
 from matplotlib import gridspec
