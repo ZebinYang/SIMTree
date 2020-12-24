@@ -22,6 +22,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, random_state=0):
 
+        self.EPSILON = 1e-7
         self.max_depth = max_depth
         self.split_features = split_features
         self.min_samples_leaf = min_samples_leaf
@@ -30,7 +31,6 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
         self.n_screen_grid = n_screen_grid
         self.n_feature_search = n_feature_search
         self.n_split_grid = n_split_grid
-        self.EPSILON = 1e-7
         self.random_state = random_state
 
     def _validate_hyperparameters(self):
