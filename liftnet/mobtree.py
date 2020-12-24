@@ -421,6 +421,39 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     os.makedirs(folder)
                 fig.savefig("%s.png" % save_path, bbox_inches="tight")
 
+    def decision_rule(self, node_id)
+
+        rule_dict = {}
+        current_node = self.tree[node_id]
+        while True:
+            if current_node["parent_id"] is None:
+                break
+            parent_node = self.tree[current_node["parent_id"]]
+            key = str(parent_node["feature"])
+            if key not in rule_dict.keys():
+                if current_node["is_left"]:
+                    rule_dict.update({key:{"split_feature": parent_node["feature"],
+                                          "threshold_left": parent_node["threshold"]}})
+                else:
+                    rule_dict.update({key:{"split_feature": parent_node["feature"],
+                                          "threshold_right": parent_node["threshold"]}})
+            elif "threshold_left" not in rule_dict[key].keys():
+                rule_dict[key].update({"threshold_left": parent_node["threshold"]})
+            elif "threshold_right" not in rule_dict[key].keys():
+                rule_dict[key].update({"threshold_right": parent_node["threshold"]})
+            current_node = parent_node
+
+        rule_list = []
+        for key, item in rule_dict.items():
+            rule = ""
+            if "threshold_right" in item.keys():
+                rule += str(round(item["threshold_right"], 3)) + "<"
+            rule += self.feature_names[item["split_feature"]]
+            if "threshold_left" in item.keys():
+                rule += "<=" + str(round(item["threshold_left"], 3))
+            rule_list.append(rule)
+        return rule_list
+
     def decision_path_indice(self, x, node_id):
 
         sample_indice = np.where(self.decision_path(x)[:, node_id - 1])[0]
