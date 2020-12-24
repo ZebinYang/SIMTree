@@ -421,7 +421,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     os.makedirs(folder)
                 fig.savefig("%s.png" % save_path, bbox_inches="tight")
 
-    def decision_rule(self, node_id)
+    def decision_rule(self, node_id):
 
         rule_dict = {}
         current_node = self.tree[node_id]
