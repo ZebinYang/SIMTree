@@ -348,10 +348,12 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                                                  + "\nSize: " + str(int(item["n_samples"]))
                                                  + "\nMean: " + str(np.round(item["value"], 3))})
             else:
+                fill_width = len(self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3)))
+                fill_width = (fill_width - 1) / 2
                 if is_regressor(self):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
-                                           "label": "____Node " + str(item["node_id"]) + "____"
+                                           "label": "_" * fill_width + "Node " + str(item["node_id"]) + "_" * fill_width
                                         + "\n" + self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3))
                                         + "\nMSE: " + str(np.round(item["impurity"], 3))
                                         + "\nSize: " + str(int(item["n_samples"]))
@@ -359,7 +361,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 elif is_classifier(self):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
-                                           "label": "____Node " + str(item["node_id"]) + "____"
+                                           "label": "_" * fill_width + "Node " + str(item["node_id"]) + "_" * fill_width
                                         + "\n" + self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3))
                                         + "\nCEntropy: " + str(np.round(item["impurity"], 3))
                                         + "\nSize: " + str(int(item["n_samples"]))
