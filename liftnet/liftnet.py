@@ -61,7 +61,7 @@ class LIFTNet(metaclass=ABCMeta):
 
         if isinstance(self.n_term, list):
             for val in self.n_term:
-                if isinstance(self.n_term, int):
+                if isinstance(val, int):
                     if val < 0:
                         raise ValueError("all the elements in n_term must be >= 0, got %s." % self.n_term)
                 else:
@@ -75,7 +75,7 @@ class LIFTNet(metaclass=ABCMeta):
 
         if isinstance(self.reg_gamma, list):
             for val in self.reg_gamma:
-                if (isinstance(self.reg_gamma, float)) or (isinstance(self.reg_gamma, int)):
+                if (isinstance(val, float)) or (isinstance(self.reg_gamma, int)):
                     if val < 0:
                         raise ValueError("all the elements in reg_gamma must be >= 0, got %s." % self.reg_gamma)
                 else:
