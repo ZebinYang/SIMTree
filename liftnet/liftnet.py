@@ -28,7 +28,7 @@ class LIFTNet(metaclass=ABCMeta):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+                 degree=3, knot_num=5, n_term=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
 
         super(LIFTNet, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -42,7 +42,7 @@ class LIFTNet(metaclass=ABCMeta):
         self.degree = degree
         self.knot_num = knot_num
         self.reg_gamma = reg_gamma
-        self.reg_lambda = reg_lambda
+        self.n_term = n_term
         self.leaf_update = leaf_update
 
     def _validate_hyperparameters(self):
@@ -59,21 +59,27 @@ class LIFTNet(metaclass=ABCMeta):
             if self.knot_num <= 0:
                 raise ValueError("knot_num must be > 0, got %s." % self.knot_num)
 
-        if isinstance(self.reg_lambda, list):
-            for val in self.reg_lambda:
-                if val < 0:
-                    raise ValueError("all the elements in reg_lambda must be >= 0, got %s." % self.reg_lambda)
-        elif (isinstance(self.reg_lambda, float)) or (isinstance(self.reg_lambda, int)):
-            if (self.reg_lambda < 0) or (self.reg_lambda > 1):
-                raise ValueError("reg_lambda must be >= 0 and <=1, got %s." % self.reg_lambda)
-            self.reg_lambda = [self.reg_lambda]
+        if isinstance(self.n_term, list):
+            for val in self.n_term:
+                if isinstance(self.n_term, int):
+                    if val < 0:
+                        raise ValueError("all the elements in n_term must be >= 0, got %s." % self.n_term)
+                else:
+                    raise ValueError("Invalid n_term")
+        elif isinstance(self.n_term, int):
+            if self.n_term < 0:
+                raise ValueError("n_term must be >= 0, got %s." % self.n_term)
+            self.n_term = [self.n_term]
         else:
-            raise ValueError("Invalid reg_lambda")
+            raise ValueError("Invalid n_term")
 
         if isinstance(self.reg_gamma, list):
             for val in self.reg_gamma:
-                if val < 0:
-                    raise ValueError("all the elements in reg_gamma must be >= 0, got %s." % self.reg_gamma)
+                if (isinstance(self.reg_gamma, float)) or (isinstance(self.reg_gamma, int)):
+                    if val < 0:
+                        raise ValueError("all the elements in reg_gamma must be >= 0, got %s." % self.reg_gamma)
+                else:
+                    raise ValueError("Invalid reg_gamma")
         elif (isinstance(self.reg_gamma, float)) or (isinstance(self.reg_gamma, int)):
             if (self.reg_gamma < 0) or (self.reg_gamma > 1):
                 raise ValueError("reg_gamma must be >= 0 and <=1, got %s." % self.reg_gamma)
@@ -153,7 +159,7 @@ class LIFTNet(metaclass=ABCMeta):
             ax2.set_xlim(xlim_min, xlim_max)
             ax2.set_ylim(-1, len(est.beta_))
             ax2.axvline(0, linestyle="dotted", color="black")
-            
+
         ax2title = ""
         sortind = np.argsort(np.abs(est.beta_).ravel())[::-1]
         for i in range(est.beta_.shape[0]):
@@ -280,7 +286,7 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+                 degree=3, knot_num=5, n_term=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -292,12 +298,12 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
                                  n_split_grid=n_split_grid,
                                  degree=degree,
                                  knot_num=knot_num,
-                                 reg_lambda=reg_lambda,
+                                 n_term=n_term,
                                  reg_gamma=reg_gamma,
                                  leaf_update=leaf_update,
                                  random_state=random_state)
 
-        self.base_estimator = SimRegressor(reg_lambda=0, reg_gamma=1e-5, degree=self.degree,
+        self.base_estimator = SimRegressor(n_term=0, reg_gamma=1e-5, degree=self.degree,
                                  knot_num=self.knot_num, random_state=self.random_state)
 
     def build_root(self):
@@ -310,7 +316,7 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
 
         base = SimRegressor(reg_gamma=self.reg_gamma, degree=self.degree,
                       knot_num=self.knot_num, random_state=self.random_state)
-        grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda},
+        grid = GridSearchCV(base, param_grid={"n_term": self.n_term},
                       scoring={"mse": make_scorer(mean_squared_error, greater_is_better=False)},
                       cv=5, refit="mse", n_jobs=1, error_score=np.nan)
         grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
@@ -329,7 +335,7 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+                 degree=3, knot_num=5, n_term=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -341,12 +347,12 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
                                  n_split_grid=n_split_grid,
                                  degree=degree,
                                  knot_num=knot_num,
-                                 reg_lambda=reg_lambda,
+                                 n_term=n_term,
                                  reg_gamma=reg_gamma,
                                  leaf_update=leaf_update,
                                  random_state=random_state)
         
-        self.base_estimator = SimClassifier(reg_lambda=0, reg_gamma=1e-5, degree=self.degree,
+        self.base_estimator = SimClassifier(n_term=0, reg_gamma=1e-5, degree=self.degree,
                                  knot_num=self.knot_num, random_state=self.random_state)
 
     def build_root(self):
@@ -364,7 +370,7 @@ class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
         else:
             base = SimClassifier(reg_gamma=self.reg_gamma, degree=self.degree,
                           knot_num=self.knot_num, random_state=self.random_state)
-            grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda},
+            grid = GridSearchCV(base, param_grid={"n_term": self.n_term},
                           scoring={"auc": make_scorer(roc_auc_score, needs_proba=True)},
                           cv=5, refit="auc", n_jobs=1, error_score=np.nan)
             grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())

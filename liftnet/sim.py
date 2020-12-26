@@ -9,7 +9,6 @@ from sklearn.utils import check_X_y, column_or_1d
 from sklearn.model_selection import train_test_split
 from sklearn.utils.validation import check_is_fitted
 from sklearn.base import BaseEstimator, RegressorMixin, ClassifierMixin, is_classifier, is_regressor
-from sklearn.linear_model import LinearRegression, Lasso, LogisticRegression, LogisticRegressionCV
 
 from abc import ABCMeta, abstractmethod
 from .smspline import SMSplineRegressor, SMSplineClassifier
@@ -21,13 +20,12 @@ __all__ = ["SimRegressor", "SimClassifier"]
 class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, clip_predict=True, random_state=0):
+    def __init__(self, n_term=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
 
-        self.reg_lambda = reg_lambda
+        self.n_term = n_term
         self.reg_gamma = reg_gamma
         self.knot_num = knot_num
         self.degree = degree
-        self.clip_predict = clip_predict
         self.random_state = random_state
 
     def _first_order_thres(self, x, y):
@@ -46,16 +44,22 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             the normalized projection inidce
         """
 
-        if self.reg_lambda == 0:
+        if self.n_term == 0:
             mu = np.average(x, axis=0)
             cov = np.cov(x.T)
             inv_cov = np.linalg.pinv(cov, 1e-7)
             s1 = np.dot(inv_cov, (x - mu).T).T
             zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
         else:
-            estimator = Lasso(alpha=self.reg_lambda, normalize=True)
-            estimator.fit(x, y)
-            zbar = estimator.coef_
+            mu = np.average(x, axis=0)
+            cov = np.cov(x.T)
+            inv_cov = np.linalg.pinv(cov, 1e-7)
+            s1 = np.dot(inv_cov, (x - mu).T).T
+            zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
+            zbar = zbar * (x.std(0) + 1e-7)
+            threshold = np.sort(np.abs(zbar))[::-1][self.n_term - 1]
+            zbar[zbar < threshold] = 0
+            zbar = zbar / (x.std(0) + 1e-7)
         if np.linalg.norm(zbar) > 0:
             beta = zbar / np.linalg.norm(zbar)
         else:
@@ -239,7 +243,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             ## normalization
             if np.linalg.norm(theta_0) > 0:
                 theta_0 = theta_0 / np.linalg.norm(theta_0)
-                if (theta_0[np.abs(theta_0) > 0][0] < 0):
+                if (theta_0[np.argmax(np.abs(theta_0))] < 0):
                     theta_0 = - theta_0
 
             # ridge update
@@ -329,8 +333,8 @@ class SimRegressor(BaseSim, RegressorMixin):
 
     Parameters
     ----------
-    reg_lambda : float, optional. default=0.1
-        Sparsity penalty strength
+    n_term : int, optional. default=0
+        Number of projection coefficients to be selected, 0 represents all features are used
 
     reg_gamma : float or list of float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
@@ -345,13 +349,12 @@ class SimRegressor(BaseSim, RegressorMixin):
         Random seed
     """
 
-    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, clip_predict=True, random_state=0):
+    def __init__(self, n_term=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
 
-        super(SimRegressor, self).__init__(reg_lambda=reg_lambda,
+        super(SimRegressor, self).__init__(n_term=n_term,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 degree=degree,
-                                clip_predict=clip_predict,
                                 random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -387,7 +390,7 @@ class SimRegressor(BaseSim, RegressorMixin):
         """
 
         self.shape_fit_ = SMSplineRegressor(knot_num=self.knot_num, reg_gamma=self.reg_gamma,
-                                xmin=xmin, xmax=xmax, degree=self.degree, clip_predict=self.clip_predict)
+                                xmin=xmin, xmax=xmax, degree=self.degree)
         self.shape_fit_.fit(x, y)
 
     def predict(self, x):
@@ -414,8 +417,8 @@ class SimClassifier(BaseSim, ClassifierMixin):
 
     Parameters
     ----------
-    reg_lambda : float, optional. default=0.1
-        Sparsity penalty strength
+    n_term : int, optional. default=0
+        Number of projection coefficients to be selected, 0 represents all features are used
 
     reg_gamma : float or list of float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
@@ -430,13 +433,12 @@ class SimClassifier(BaseSim, ClassifierMixin):
         Random seed
     """
 
-    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, clip_predict=True, random_state=0):
+    def __init__(self, n_term=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
 
-        super(SimClassifier, self).__init__(reg_lambda=reg_lambda,
+        super(SimClassifier, self).__init__(n_term=n_term,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 degree=degree,
-                                clip_predict=clip_predict,
                                 random_state=random_state)
 
     def _validate_input(self, x, y):
@@ -480,7 +482,7 @@ class SimClassifier(BaseSim, ClassifierMixin):
         """
 
         self.shape_fit_ = SMSplineClassifier(knot_num=self.knot_num, reg_gamma=self.reg_gamma,
-                                xmin=xmin, xmax=xmax, degree=self.degree, clip_predict=self.clip_predict)
+                                xmin=xmin, xmax=xmax, degree=self.degree)
         self.shape_fit_.fit(x, y)
 
     def predict_proba(self, x):
