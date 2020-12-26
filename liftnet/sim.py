@@ -58,7 +58,7 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
             zbar = zbar * (x.std(0) + 1e-7)
             threshold = np.sort(np.abs(zbar))[::-1][self.n_term - 1]
-            zbar[zbar < threshold] = 0
+            zbar[np.abs(zbar) < threshold] = 0
             zbar = zbar / (x.std(0) + 1e-7)
         if np.linalg.norm(zbar) > 0:
             beta = zbar / np.linalg.norm(zbar)
