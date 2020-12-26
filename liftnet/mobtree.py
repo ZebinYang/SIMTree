@@ -349,7 +349,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                                                  + "\nMean: " + str(np.round(item["value"], 3))})
             else:
                 fill_width = len(self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3)))
-                fill_width = int(round((fill_width - 1) / 2))
+                fill_width = int(round((fill_width - 2) / 2))
                 if is_regressor(self):
                     draw_tree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
