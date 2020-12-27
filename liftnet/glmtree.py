@@ -48,7 +48,7 @@ class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
         best_estimator.intercept_ = best_estimator.intercept_ - np.dot(mx, best_estimator.coef_.T)
 
         predict_func = lambda x: best_estimator.predict(x)
-        best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(nx))
+        best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
         return predict_func, best_estimator, best_impurity
 
 
@@ -91,5 +91,5 @@ class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
             best_estimator.coef_ = best_estimator.coef_ / sx
             best_estimator.intercept_ = best_estimator.intercept_ - np.dot(mx, best_estimator.coef_.T)
             predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
-            best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(nx)[:, 1])
+            best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity

@@ -159,11 +159,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
         best_impurity = np.inf
         best_left_impurity = np.inf
         best_right_impurity = np.inf
-        if self.n_feature_search > len(self.split_features):
-            important_split_features = self.split_features
-        else:
-            important_split_features = self.screen_features(sample_indice)
-        for feature_indice in important_split_features:
+        for feature_indice in self.important_split_features:
 
             current_feature = node_x[:, feature_indice]
             sortted_indice = np.argsort(current_feature)
@@ -263,6 +259,11 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
         
         if self.split_features is None:
             self.split_features = np.arange(n_features).tolist()
+
+        if self.n_feature_search > len(self.split_features):
+            self.important_split_features = self.split_features
+        else:
+            self.important_split_features = self.screen_features(sample_indice)
 
         np.random.seed(self.random_state)
         root_impurity = self.build_root()
