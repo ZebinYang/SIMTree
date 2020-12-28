@@ -28,7 +28,7 @@ class LIFTNet(metaclass=ABCMeta):
 
     def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, n_term=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
 
         super(LIFTNet, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -42,7 +42,7 @@ class LIFTNet(metaclass=ABCMeta):
         self.degree = degree
         self.knot_num = knot_num
         self.reg_gamma = reg_gamma
-        self.n_term = n_term
+        self.reg_lambda = reg_lambda
         self.leaf_update = leaf_update
 
     def _validate_hyperparameters(self):
