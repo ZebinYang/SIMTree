@@ -35,7 +35,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
 
     def _validate_hyperparameters(self):
 
-        if not isinstance(self.max_depth, int):
+        if not isinstance(self.max_depth, (np.int, int)):
             raise ValueError("degree must be an integer, got %s." % self.max_depth)
             if self.max_depth < 0:
                 raise ValueError("degree must be >= 0, got %s." % self.max_depth)
@@ -45,9 +45,8 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 raise ValueError("split_features must be an list or None, got %s." %
                          self.split_features)
 
-        if not isinstance(self.min_samples_leaf, int):
+        if not isinstance(self.min_samples_leaf, (np.int, int)):
             raise ValueError("min_samples_leaf must be an integer, got %s." % self.min_samples_leaf)
-
             if self.min_samples_leaf < 0:
                 raise ValueError("min_samples_leaf must be >= 0, got %s." % self.min_samples_leaf)
 
@@ -61,17 +60,17 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
         else:
             self.feature_names = ["X" + str(i + 1) for i in range(self.n_features)]
 
-        if not isinstance(self.n_feature_search, int):
+        if not isinstance(self.n_feature_search, (np.int, int)):
             raise ValueError("n_feature_search must be an integer, got %s." % self.n_feature_search)
             if self.n_feature_search <= 0:
                 raise ValueError("n_feature_search must be > 0, got %s." % self.n_feature_search)
 
-        if not isinstance(self.n_split_grid, int):
+        if not isinstance(self.n_split_grid, (np.int, int)):
             raise ValueError("n_split_grid must be an integer, got %s." % self.n_split_grid)
             if self.n_split_grid <= 0:
                 raise ValueError("n_split_grid must be > 0, got %s." % self.n_split_grid)
 
-        if not isinstance(self.n_screen_grid, int):
+        if not isinstance(self.n_screen_grid, (np.int, int)):
             raise ValueError("n_screen_grid must be an integer, got %s." % self.n_screen_grid)
             if self.n_screen_grid <= 0:
                 raise ValueError("n_screen_grid must be > 0, got %s." % self.n_screen_grid)

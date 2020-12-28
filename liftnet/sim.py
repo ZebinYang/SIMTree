@@ -3,6 +3,7 @@ from copy import deepcopy
 from matplotlib import gridspec
 import matplotlib.pyplot as plt
 
+from sklearn.linear_model import Lasso
 from sklearn.utils.extmath import softmax
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.utils import check_X_y, column_or_1d
@@ -20,9 +21,9 @@ __all__ = ["SimRegressor", "SimClassifier"]
 class BaseSim(BaseEstimator, metaclass=ABCMeta):
 
     @abstractmethod
-    def __init__(self, n_term=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
 
-        self.n_term = n_term
+        self.reg_lambda = reg_lambda
         self.reg_gamma = reg_gamma
         self.knot_num = knot_num
         self.degree = degree
@@ -44,22 +45,19 @@ class BaseSim(BaseEstimator, metaclass=ABCMeta):
             the normalized projection inidce
         """
 
-        if self.n_term == 0:
+        if self.reg_lambda == 0:
             mu = np.average(x, axis=0)
             cov = np.cov(x.T)
             inv_cov = np.linalg.pinv(cov, 1e-7)
             s1 = np.dot(inv_cov, (x - mu).T).T
             zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
         else:
-            mu = np.average(x, axis=0)
-            cov = np.cov(x.T)
-            inv_cov = np.linalg.pinv(cov, 1e-7)
-            s1 = np.dot(inv_cov, (x - mu).T).T
-            zbar = np.average(y.reshape(-1, 1) * s1, axis=0)
-            zbar = zbar * (x.std(0) + 1e-7)
-            threshold = np.sort(np.abs(zbar))[::-1][self.n_term - 1]
-            zbar[np.abs(zbar) < threshold] = 0
-            zbar = zbar / (x.std(0) + 1e-7)
+            mx = x.mean(0)
+            sx = x.std(0) + 1e-7
+            nx = (x - mx) / sx
+            lr = Lasso(alpha=self.reg_lambda)
+            lr.fit(nx, y)
+            zbar = lr.coef_ / sx
         if np.linalg.norm(zbar) > 0:
             beta = zbar / np.linalg.norm(zbar)
         else:
@@ -333,8 +331,8 @@ class SimRegressor(BaseSim, RegressorMixin):
 
     Parameters
     ----------
-    n_term : int, optional. default=0
-        Number of projection coefficients to be selected, 0 represents all features are used
+    reg_lambda : float, optional. default=0
+        Sparsity strength
 
     reg_gamma : float or list of float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
@@ -349,9 +347,9 @@ class SimRegressor(BaseSim, RegressorMixin):
         Random seed
     """
 
-    def __init__(self, n_term=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
 
-        super(SimRegressor, self).__init__(n_term=n_term,
+        super(SimRegressor, self).__init__(reg_lambda=reg_lambda,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 degree=degree,
@@ -417,8 +415,8 @@ class SimClassifier(BaseSim, ClassifierMixin):
 
     Parameters
     ----------
-    n_term : int, optional. default=0
-        Number of projection coefficients to be selected, 0 represents all features are used
+    reg_lambda : float, optional. default=0
+        Sparsity strength
 
     reg_gamma : float or list of float, optional. default=0.1
         Roughness penalty strength of the spline algorithm
@@ -433,9 +431,9 @@ class SimClassifier(BaseSim, ClassifierMixin):
         Random seed
     """
 
-    def __init__(self, n_term=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
+    def __init__(self, reg_lambda=0, reg_gamma=1e-5, knot_num=5, degree=3, random_state=0):
 
-        super(SimClassifier, self).__init__(n_term=n_term,
+        super(SimClassifier, self).__init__(reg_lambda=reg_lambda,
                                 reg_gamma=reg_gamma,
                                 knot_num=knot_num,
                                 degree=degree,
