@@ -259,7 +259,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
         if self.split_features is None:
             self.split_features = np.arange(n_features).tolist()
 
-        if self.n_feature_search > len(self.split_features):
+        if self.n_feature_search > len(self.split_features) and (self.max_depth >= 1):
             self.important_split_features = self.split_features
         else:
             self.important_split_features = self.screen_features(sample_indice)
@@ -286,7 +286,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 n_samples = len(sample_indice)
                 is_leaf = (depth >= self.max_depth or
                        n_samples < 2 * self.min_samples_leaf)
-                
+
             if not is_leaf:
                 split = self.node_split(sample_indice)
                 impurity_improvement = impurity - split["impurity"]
