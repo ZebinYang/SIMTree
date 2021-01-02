@@ -65,20 +65,21 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
         order : int
             order of derivative
         """
-
+        if order > self.degree:
+            raise Exception("order should not be greater than degree")
         if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
             derivative = np.zeros((x.shape[0], 1))
         elif "modelspec" in self.sm_.names:
             modelspec = self.sm_[int(np.where(self.sm_.names == "modelspec")[0][0])]
             knots = np.array(modelspec[0])
             coefs = np.array(modelspec[11]).reshape(-1, 1)
-            basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, d=order,
-                               xmin=0, xmax=1, periodic=False, intercept=True)
+            basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, m=1 if self.degree==1 else 2, d=order,
+                               xmin=self.xmin, xmax=self.xmax, periodic=False, intercept=True)
             derivative = np.dot(basis[0], coefs).ravel()
         else:
             knots = np.array(self.sm_[12])
             coefs = np.array(self.sm_[15]).reshape(-1, 1)
-            basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, d=order,
+            basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, m=1 if self.degree==1 else 2, d=order,
                                xmin=0, xmax=1, periodic=False, intercept=True)
             derivative = np.dot(basis[0], coefs).ravel()
         return derivative

@@ -323,8 +323,8 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
         best_estimator = grid.best_estimator_
         if self.leaf_update:
             best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice].ravel(),
-                                      max_middle_iter=100, n_middle_iter_no_change=5,
-                                      max_inner_iter=100, n_inner_iter_no_change=5,
+                                      max_middle_iter=1000, n_middle_iter_no_change=10,
+                                      max_inner_iter=1000, n_inner_iter_no_change=10,
                                       batch_size=min(int(0.2 * len(sample_indice)), 100))
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
