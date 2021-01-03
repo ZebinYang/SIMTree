@@ -26,9 +26,9 @@ class LIFTNet(metaclass=ABCMeta):
         Base LIFTNet class for classification and regression.
      """
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20,
+                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
 
         super(LIFTNet, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -284,9 +284,9 @@ class LIFTNet(metaclass=ABCMeta):
 
 class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20,
+                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
 
         super(LIFTNetRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -333,9 +333,9 @@ class LIFTNetRegressor(LIFTNet, MoBTreeRegressor, RegressorMixin):
 
 class LIFTNetClassifier(LIFTNet, MoBTreeClassifier, ClassifierMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20,
-                 degree=3, knot_num=5, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20,
+                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
 
         super(LIFTNetClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
