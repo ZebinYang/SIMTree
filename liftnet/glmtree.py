@@ -15,8 +15,8 @@ __all__ = ["GLMTreeRegressor", "GLMTreeClassifier"]
 
 class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, reg_lambda=0, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20, reg_lambda=0, random_state=0):
 
         super(GLMTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -55,8 +55,8 @@ class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
 
 class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, reg_lambda=0, random_state=0):
+    def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20, reg_lambda=0, random_state=0):
 
         super(GLMTreeClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
