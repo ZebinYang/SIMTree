@@ -83,7 +83,7 @@ class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
             predict_func = lambda x: np.ones(x.shape[0]) * self.y[sample_indice].mean()
             best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         else:
-            best_estimator = LogisticRegressionCV(Cs=self.reg_lambda, penalty="l1", solver="liblinear", scoring="auc",
+            best_estimator = LogisticRegressionCV(Cs=self.reg_lambda, penalty="l1", solver="liblinear", scoring="roc_auc",
                                       cv=5, random_state=self.random_state)
             mx = self.x[sample_indice].mean(0)
             sx = self.x[sample_indice].std(0) + self.EPSILON
