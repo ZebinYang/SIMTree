@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.utils.validation import check_is_fitted
 from sklearn.model_selection import GridSearchCV
-from sklearn.metrics import make_scorer, accuracy_score, mean_squared_error
+from sklearn.metrics import make_scorer, roc_auc_score, mean_squared_error
 from sklearn.base import RegressorMixin, ClassifierMixin, is_regressor, is_classifier
 
 from .mobtree import MoBTreeRegressor, MoBTreeClassifier
@@ -16,8 +16,8 @@ __all__ = ["CustomMobTreeRegressor", "CustomMobTreeClassifier"]
 
 class CustomMobTreeRegressor(MoBTreeRegressor, RegressorMixin):
 
-    def __init__(self, base_estimator, param_dict={}, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20, random_state=0, **kargs):
+    def __init__(self, base_estimator, param_dict={}, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, random_state=0, **kargs):
 
         super(CustomMobTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -86,8 +86,8 @@ class CustomMobTreeClassifier(MoBTreeClassifier, RegressorMixin):
             best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         else:
             grid = GridSearchCV(self.base_estimator, param_grid=self.param_dict,
-                          scoring={"acc": make_scorer(accuracy_score, needs_proba=False)},
-                          cv=5, refit="acc", n_jobs=1, error_score=np.nan)
+                          scoring={"auc": make_scorer(roc_auc_score, needs_proba=True)},
+                          cv=5, refit="auc", n_jobs=1, error_score=np.nan)
             grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
             best_estimator = grid.best_estimator_
             predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
