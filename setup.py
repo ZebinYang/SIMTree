@@ -2,12 +2,12 @@ from setuptools import setup
 
 setup(name='liftnet',
       version='0.1',
-      description='Locally interpretable and fast training network',
-      url='https://github.com/ZebinYang/LIFT-Net',
+      description='Single-index model tree',
+      url='https://github.com/ZebinYang/SIMTree',
       author='Zebin Yang',
       author_email='yangzb2010@hku.hk',
       license='GPL',
-      packages=['liftnet'],
+      packages=['simtree'],
       install_requires=[
           'matplotlib', 'numpy', 'sklearn'],
       zip_safe=False)
