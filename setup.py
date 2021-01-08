@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='liftnet',
+setup(name='simtree',
       version='0.1',
       description='Single-index model tree',
       url='https://github.com/ZebinYang/SIMTree',
