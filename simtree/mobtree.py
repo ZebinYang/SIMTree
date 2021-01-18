@@ -137,7 +137,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     right_impurity = self.evaluate_estimator(self.base_estimator, node_x[right_indice], node_y[right_indice].ravel())
 
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
-                if current_impurity < best_impurity:
+                if current_impurity < (best_impurity - self.EPSILON):
                     best_impurity = current_impurity
             feature_impurity.append(best_impurity)
         split_feature_indices = np.argsort(feature_impurity)[:self.n_feature_search]
@@ -204,7 +204,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     right_impurity = self.evaluate_estimator(self.base_estimator, node_x[right_indice], node_y[right_indice].ravel())
 
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
-                if current_impurity < best_impurity:
+                if current_impurity < (best_impurity - self.EPSILON):
                     best_position = i + 1
                     best_feature = feature_indice
                     best_impurity = current_impurity
@@ -290,7 +290,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
             if not is_leaf:
                 split = self.node_split(sample_indice)
                 impurity_improvement = impurity - split["impurity"]
-                is_leaf = (is_leaf or (impurity_improvement < self.min_impurity_decrease) or
+                is_leaf = (is_leaf or (impurity_improvement < (self.min_impurity_decrease + self.EPSILON)) or
                         (split["left"] is None) or (split["right"] is None))
 
             if is_leaf:
