@@ -8,6 +8,5 @@ setup(name='simtree',
       author_email='yangzb2010@hku.hk',
       license='GPL',
       packages=['simtree'],
-      install_requires=[
-          'matplotlib', 'numpy', 'sklearn'],
+      install_requires=['matplotlib>=3.1.3', 'numpy>=1.15.2', 'scikit-learn>=0.23.0', 'rpy2'],
       zip_safe=False)
