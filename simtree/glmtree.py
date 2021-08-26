@@ -42,7 +42,7 @@ class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
         sx = self.x[sample_indice].std(0) + self.EPSILON
         nx = (self.x[sample_indice] - mx) / sx
 
-        best_estimator = LassoCV(alphas=self.reg_lambda, cv=5, random_state=self.random_state)
+        best_estimator = LassoCV(alphas=self.reg_lambda, cv=5, n_jobs=1, random_state=self.random_state)
         best_estimator.fit(nx, self.y[sample_indice])
         best_estimator.coef_ = best_estimator.coef_ / sx
         best_estimator.intercept_ = best_estimator.intercept_ - np.dot(mx, best_estimator.coef_.T)
@@ -84,7 +84,7 @@ class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
             best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         else:
             best_estimator = LogisticRegressionCV(Cs=self.reg_lambda, penalty="l1", solver="liblinear", scoring="roc_auc",
-                                      cv=5, random_state=self.random_state)
+                                      cv=5, n_jobs=1, random_state=self.random_state)
             mx = self.x[sample_indice].mean(0)
             sx = self.x[sample_indice].std(0) + self.EPSILON
             nx = (self.x[sample_indice] - mx) / sx

@@ -112,7 +112,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                if self.min_samples_leaf < n_samples / (self.n_screen_grid - 1):
+                if self.min_samples_leaf < n_samples / max((self.n_screen_grid - 1), 2):
                     if (i + 1) / n_samples < (split_point + 1) / (self.n_screen_grid + 1):
                         continue
                 elif n_samples > 2 * self.min_samples_leaf:

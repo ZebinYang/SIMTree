@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='simtree',
-      version='0.1',
+      version='0.1.1',
       description='Single-index model tree',
       url='https://github.com/ZebinYang/SIMTree',
       author='Zebin Yang',

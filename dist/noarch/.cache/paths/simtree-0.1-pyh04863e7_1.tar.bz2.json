@@ -1,0 +1,95 @@
+{
+  "paths": [
+    {
+      "_path": "site-packages/simtree-0.1-py3.6.egg-info/PKG-INFO",
+      "path_type": "hardlink",
+      "sha256": "0dd2b864edb58dfe4bc3790655254484f124bb6acb6bc9ecf60ecc61eff65c0c",
+      "size_in_bytes": 233
+    },
+    {
+      "_path": "site-packages/simtree-0.1-py3.6.egg-info/SOURCES.txt",
+      "path_type": "hardlink",
+      "sha256": "1a7c1f0572c2848e8ed7ee9fa0b89cc4ec9b551db75e2b2ae5131120f8c317ea",
+      "size_in_bytes": 352
+    },
+    {
+      "_path": "site-packages/simtree-0.1-py3.6.egg-info/dependency_links.txt",
+      "path_type": "hardlink",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "size_in_bytes": 1
+    },
+    {
+      "_path": "site-packages/simtree-0.1-py3.6.egg-info/installed-files.txt",
+      "path_type": "hardlink",
+      "sha256": "07a5a3ff354298a39cc3f4320e4ee6e409d1e2c6afe9c12af7e8ea9caff6d633",
+      "size_in_bytes": 622
+    },
+    {
+      "_path": "site-packages/simtree-0.1-py3.6.egg-info/not-zip-safe",
+      "path_type": "hardlink",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+      "size_in_bytes": 1
+    },
+    {
+      "_path": "site-packages/simtree-0.1-py3.6.egg-info/requires.txt",
+      "path_type": "hardlink",
+      "sha256": "45e1165f7e4c3a153f1fd43c000002b7369a8b9302cd798931fb7612dcde0542",
+      "size_in_bytes": 58
+    },
+    {
+      "_path": "site-packages/simtree-0.1-py3.6.egg-info/top_level.txt",
+      "path_type": "hardlink",
+      "sha256": "6a1936907e580e7f33d3864a6023c56c4b1e95eef747b0e59dccacefba44d5b5",
+      "size_in_bytes": 8
+    },
+    {
+      "_path": "site-packages/simtree/__init__.py",
+      "path_type": "hardlink",
+      "sha256": "57b1873e1be0681c961c40aac516327d09b6248791df856bfa769c9ec733bf1e",
+      "size_in_bytes": 489
+    },
+    {
+      "_path": "site-packages/simtree/cart.py",
+      "path_type": "hardlink",
+      "sha256": "bb6ade33cb81c1bcd28a622dce6b9bda69dc63ec8b9747976892a5f49aabb380",
+      "size_in_bytes": 8568
+    },
+    {
+      "_path": "site-packages/simtree/customtree.py",
+      "path_type": "hardlink",
+      "sha256": "47b1d34cc1b8cba9af5aa4beadf6cb4ffc3f2dcdf48c7b6122710aac6c2322e3",
+      "size_in_bytes": 5053
+    },
+    {
+      "_path": "site-packages/simtree/glmtree.py",
+      "path_type": "hardlink",
+      "sha256": "61935af4729a1344793362522e1f08af3f61e507da1d1fa30ccb50072bb698d6",
+      "size_in_bytes": 5293
+    },
+    {
+      "_path": "site-packages/simtree/mobtree.py",
+      "path_type": "hardlink",
+      "sha256": "938855adf2b0065a5e6a33bfdc7736d063e56142c96d62fe76e6d250b2757bea",
+      "size_in_bytes": 28923
+    },
+    {
+      "_path": "site-packages/simtree/sim.py",
+      "path_type": "hardlink",
+      "sha256": "700c81c195b3c9c851a44fc5c9c0147fc490cae85a1900241d03d79a9f84d320",
+      "size_in_bytes": 19282
+    },
+    {
+      "_path": "site-packages/simtree/simtree.py",
+      "path_type": "hardlink",
+      "sha256": "e3b6e19fabc46fe7daa6e4291f22db8a3ad7a7fdbf9bde030bfbd244bd1a6b49",
+      "size_in_bytes": 19481
+    },
+    {
+      "_path": "site-packages/simtree/smspline.py",
+      "path_type": "hardlink",
+      "sha256": "a0c7f798b195e075d0e1c4d98c267cbff2599f2b492c6863dc60f1a9b64b5b0e",
+      "size_in_bytes": 13408
+    }
+  ],
+  "paths_version": 1
+}
