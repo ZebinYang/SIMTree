@@ -179,7 +179,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                if self.min_samples_leaf < n_samples / (self.n_split_grid - 1):
+                if self.min_samples_leaf < n_samples / max((self.n_split_grid - 1), 2):
                     if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
                         continue
                 elif n_samples > 2 * self.min_samples_leaf:
@@ -312,27 +312,35 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                                  "is_left": False})
         return self
 
-    def plot_tree(self, folder="./results/", name="demo", save_png=False, save_eps=False):
+    def plot_tree(self, draw_depth=np.inf, start_node_id=1, folder="./results/", name="demo", save_png=False, save_eps=False):
 
+        idx = 0
+        draw_subtree = {}
         draw_tree = copy.deepcopy(self.tree)
-        pending_node_list = [draw_tree[1]]
-        max_depth = 1 + np.max([item["depth"] for key, item in self.tree.items()])
+        pending_node_list = [draw_tree[start_node_id]]
+        start_depth = draw_tree[start_node_id]["depth"]
+        total_depth = 1 + min(np.max([item["depth"] for key, item in self.tree.items()]) - start_depth, draw_depth)
+        max_depth = min(np.max([item["depth"] for key, item in self.tree.items()]), start_depth + draw_depth)
         while len(pending_node_list) > 0:
 
             item = pending_node_list.pop()
-            if item["parent_id"] is None:
+            if item["depth"] > max_depth:
+                continue
+            if item["parent_id"] is None or idx == 0:
                 xy = (0.5, 0)
                 parent_xy = None
             else:
-                parent_xy = draw_tree[item["parent_id"]]["xy"]
+                parent_xy = draw_subtree[item["parent_id"]]["xy"]
                 if item["is_left"]:
-                    xy = (parent_xy[0] - 1 / 2 ** (item["depth"] + 1), 3 * item["depth"] / (3 * max_depth - 2))
+                    xy = (parent_xy[0] - 1 / 2 ** (item["depth"] - start_depth + 1), 3 * (item["depth"] - start_depth) / (3 * total_depth - 2))
                 else:
-                    xy = (parent_xy[0] + 1 / 2 ** (item["depth"] + 1), 3 * item["depth"] / (3 * max_depth - 2))
+                    xy = (parent_xy[0] + 1 / 2 ** (item["depth"] - start_depth + 1), 3 * (item["depth"] - start_depth) / (3 * total_depth - 2))
+            idx += 1
 
+            draw_subtree[item["node_id"]] = item
             if item["is_leaf"]:
                 if is_regressor(self):
-                    draw_tree[item["node_id"]].update({"xy": xy,
+                    draw_subtree[item["node_id"]].update({"xy": xy,
                                           "parent_xy": parent_xy,
                                           "estimator": item["estimator"],
                                           "label": "____Node " + str(item["node_id"]) + "____" +
@@ -340,18 +348,18 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                                                  + "\nSize: " + str(int(item["n_samples"]))
                                                  + "\nMean: " + str(np.round(item["value"], 3))})
                 elif is_classifier(self):
-                    draw_tree[item["node_id"]].update({"xy": xy,
+                    draw_subtree[item["node_id"]].update({"xy": xy,
                                           "parent_xy": parent_xy,
                                           "estimator": item["estimator"],
                                           "label": "____Node " + str(item["node_id"]) + "____" +
                                                 "\nCEntropy: " + str(np.round(item["impurity"], 3))
                                                  + "\nSize: " + str(int(item["n_samples"]))
-                                                 + "\nMean: " + str(np.round(item["value"], 3))})
+                                                     + "\nMean: " + str(np.round(item["value"], 3))})
             else:
                 fill_width = len(self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3)))
                 fill_width = int(round((fill_width - 2) / 2))
                 if is_regressor(self):
-                    draw_tree[item["node_id"]].update({"xy": xy,
+                    draw_subtree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
                                            "label": "_" * fill_width + "Node " + str(item["node_id"]) + "_" * fill_width
                                         + "\n" + self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3))
@@ -359,7 +367,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                                         + "\nSize: " + str(int(item["n_samples"]))
                                         + "\nMean: " + str(np.round(item["value"], 3))})
                 elif is_classifier(self):
-                    draw_tree[item["node_id"]].update({"xy": xy,
+                    draw_subtree[item["node_id"]].update({"xy": xy,
                                            "parent_xy": parent_xy,
                                            "label": "_" * fill_width + "Node " + str(item["node_id"]) + "_" * fill_width
                                         + "\n" + self.feature_names[item["feature"]] + " <=" + str(np.round(item["threshold"], 3))
@@ -370,7 +378,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 pending_node_list.append(self.tree[item["left_child_id"]])
                 pending_node_list.append(self.tree[item["right_child_id"]])
 
-        fig = plt.figure(figsize=(2 ** max_depth, (max_depth - 0.8) * 2))
+        fig = plt.figure(figsize=(2 ** total_depth, (total_depth - 0.8) * 2))
         tree = fig.add_axes([0.0, 0.0, 1, 1])
         ax_width = tree.get_window_extent().width
         ax_height = tree.get_window_extent().height
@@ -380,7 +388,8 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
         values = np.array([item["value"] for key, item in self.tree.items()])
         min_value, max_value = values.min(), values.max()
 
-        for key, item in draw_tree.items():
+        idx = 0
+        for key, item in draw_subtree.items():
 
             if max_value == min_value:
                 if item["is_leaf"]:
@@ -396,22 +405,24 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     color = [int(round(alpha * c + (1 - alpha) * 255, 0)) for c in color_list]
 
             kwargs = dict(bbox={"fc": '#%2x%2x%2x' % tuple(color), "boxstyle": "round"}, arrowprops={"arrowstyle": "<-"},
-                          ha='center', va='center', zorder=100 - 10 * item["depth"], xycoords='axes pixels', fontsize=14)
+                          ha='center', va='center', zorder=100 - 10 * (item["depth"] - start_depth), xycoords='axes pixels', fontsize=14)
 
-            if item["parent_id"] is None:
+            if item["parent_id"] is None or idx == 0:
                 tree.annotate(item["label"], (item["xy"][0] * ax_width, (1 - item["xy"][1]) * ax_height), **kwargs)
             else:
                 if item["is_left"]:
-                    tree.annotate(item["label"], ((item["parent_xy"][0] - 0.01 / 2 ** (item["depth"] + 1)) * ax_width,
-                                         (1 - item["parent_xy"][1] - 0.1 / max_depth) * ax_height),
+                    tree.annotate(item["label"], ((item["parent_xy"][0] - 0.01 / 2 ** (item["depth"] - start_depth + 1)) * ax_width,
+                                         (1 - item["parent_xy"][1] - 0.1 / total_depth) * ax_height),
                                         (item["xy"][0] * ax_width, (1 - item["xy"][1]) * ax_height), **kwargs)
                 else:
-                    tree.annotate(item["label"], ((item["parent_xy"][0] + 0.01 / 2 ** (item["depth"] + 1)) * ax_width,
-                                         (1 - item["parent_xy"][1] - 0.1 / max_depth) * ax_height),
+                    tree.annotate(item["label"], ((item["parent_xy"][0] + 0.01 / 2 ** (item["depth"] - start_depth + 1)) * ax_width,
+                                         (1 - item["parent_xy"][1] - 0.1 / total_depth) * ax_height),
                                         (item["xy"][0] * ax_width, (1 - item["xy"][1]) * ax_height), **kwargs)
+            idx += 1
 
         tree.set_axis_off()
         plt.show()
+
         if max_depth > 0:
             save_path = folder + name
             if save_eps:

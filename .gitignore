@@ -2,3 +2,4 @@ examples/.ipynb_checkpoints/*
 history/
 scripts/
 dist/
+simtree.egg-info/
