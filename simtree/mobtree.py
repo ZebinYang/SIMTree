@@ -445,25 +445,29 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
             key = str(parent_node["feature"])
             if key not in rule_dict.keys():
                 if current_node["is_left"]:
-                    rule_dict.update({key:{"split_feature": parent_node["feature"],
-                                          "threshold_left": parent_node["threshold"]}})
+                    rule_dict.update({key:{"left": parent_node["threshold"]}})
                 else:
-                    rule_dict.update({key:{"split_feature": parent_node["feature"],
-                                          "threshold_right": parent_node["threshold"]}})
-            elif "threshold_left" not in rule_dict[key].keys():
-                rule_dict[key].update({"threshold_left": parent_node["threshold"]})
-            elif "threshold_right" not in rule_dict[key].keys():
-                rule_dict[key].update({"threshold_right": parent_node["threshold"]})
+                    rule_dict.update({key:{"right": parent_node["threshold"]}})
+            else:
+                if "left" not in rule_dict[key].keys():
+                    rule_dict[key].update({"left": parent_node["threshold"]})
+                else:
+                    rule_dict[key].update({"left": min(parent_node["threshold"], rule_dict[key]["left"])})
+                if "right" not in rule_dict[key].keys():
+                    rule_dict[key].update({"right": parent_node["threshold"]})
+                else:
+                    rule_dict[key].update({"right": max(parent_node["threshold"], rule_dict[key]["right"])})
             current_node = parent_node
+            print(rule_dict)
 
         rule_list = []
         for key, item in rule_dict.items():
             rule = ""
-            if "threshold_right" in item.keys():
-                rule += str(round(item["threshold_right"], 3)) + "<"
-            rule += self.feature_names[item["split_feature"]]
-            if "threshold_left" in item.keys():
-                rule += "<=" + str(round(item["threshold_left"], 3))
+            if "right" in item.keys():
+                rule += str(round(item["right"], 3)) + "<"
+            rule += self.feature_names[int(key)]
+            if "left" in item.keys():
+                rule += "<=" + str(round(item["left"], 3))
             rule_list.append(rule)
         return rule_list
 
