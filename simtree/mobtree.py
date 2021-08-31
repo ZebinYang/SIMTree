@@ -449,16 +449,17 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 else:
                     rule_dict.update({key:{"right": parent_node["threshold"]}})
             else:
-                if "left" not in rule_dict[key].keys():
-                    rule_dict[key].update({"left": parent_node["threshold"]})
+                if current_node["is_left"]:
+                    if "left" not in rule_dict[key].keys():
+                        rule_dict[key].update({"left": parent_node["threshold"]})
+                    else:
+                        rule_dict[key].update({"left": min(parent_node["threshold"], rule_dict[key]["left"])})
                 else:
-                    rule_dict[key].update({"left": min(parent_node["threshold"], rule_dict[key]["left"])})
-                if "right" not in rule_dict[key].keys():
-                    rule_dict[key].update({"right": parent_node["threshold"]})
-                else:
-                    rule_dict[key].update({"right": max(parent_node["threshold"], rule_dict[key]["right"])})
+                    if "right" not in rule_dict[key].keys():
+                        rule_dict[key].update({"right": parent_node["threshold"]})
+                    else:
+                        rule_dict[key].update({"right": max(parent_node["threshold"], rule_dict[key]["right"])})
             current_node = parent_node
-            print(rule_dict)
 
         rule_list = []
         for key, item in rule_dict.items():
