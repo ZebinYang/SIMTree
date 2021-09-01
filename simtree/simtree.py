@@ -126,14 +126,14 @@ class SIMTree(metaclass=ABCMeta):
         est = self.leaf_estimators_[node_id]
         for i in range(est.beta_.shape[0]):
             if i == 0:
-                equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + clf.feature_names[sortind[i]]
+                equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
                 continue
             else:
                 if est.beta_[sortind[i], 0] > 0:
                     equation += " + "
                 else:
                     equation += " - "
-                equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + clf.feature_names[sortind[i]]
+                equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
         return equation
 
     def visualize_one_leaf(self, node_id, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
