@@ -101,6 +101,10 @@ class SIMTree(metaclass=ABCMeta):
             print("Invalid leaf node id.")
             return
 
+        if self.leaf_estimators_[node_id] is None:
+            print("This is a constant node, and SIM is not available.")
+            return
+
         return self.leaf_estimators_[node_id].beta_.flatten()
 
     def get_feature_importance(self, node_id):
@@ -116,6 +120,10 @@ class SIMTree(metaclass=ABCMeta):
         check_is_fitted(self, "tree")
         if node_id not in self.leaf_estimators_.keys():
             print("Invalid leaf node id.")
+            return
+
+        if self.leaf_estimators_[node_id] is None:
+            print("This is a constant node, and SIM is not available.")
             return
 
         importance = (self.x[self.decision_path_indice(self.x, node_id)] * self.leaf_estimators_[node_id].beta_.ravel()).std(0)
@@ -138,10 +146,14 @@ class SIMTree(metaclass=ABCMeta):
             print("Invalid leaf node id.")
             return
 
+        if self.leaf_estimators_[node_id] is None:
+            print("This is a constant node, and SIM is not available.")
+            return
+
         equation = ""
+        est = self.leaf_estimators_[node_id]
         importance = self.get_feature_importance(node_id)
         sortind = np.argsort(importance)[::-1]
-        est = self.leaf_estimators_[node_id]
         for i in range(est.beta_.shape[0]):
             if i == 0:
                 equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
@@ -154,7 +166,7 @@ class SIMTree(metaclass=ABCMeta):
                 equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
         return equation
     
-    def get_sparsity(self, node_id, grid_size=100):
+    def get_sparsity(self, node_id):
                 
         """return the sparsity of the projection index in one leaf node, i.e., the percentage of zero coefficients.
 
@@ -169,6 +181,10 @@ class SIMTree(metaclass=ABCMeta):
             print("Invalid leaf node id.")
             return
 
+        if self.leaf_estimators_[node_id] is None:
+            print("This is a constant node, and SIM is not available.")
+            return
+
         est = self.leaf_estimators_[node_id]
         sparsity = np.mean(est.beta_ == 0)
         return sparsity
@@ -176,6 +192,7 @@ class SIMTree(metaclass=ABCMeta):
     def get_roughness(self, node_id, grid_size=100):
                 
         """return the roughness of the ridge function in one leaf node, i.e., the root-mean-square second derivative of the ridge function.
+           for a fair comparison, the roughness is adjusted by mapping the x to be within [0, 1]
 
         Parameters
         ---------
@@ -195,8 +212,9 @@ class SIMTree(metaclass=ABCMeta):
             return
 
         est = self.leaf_estimators_[node_id]
+        adj = (est.shape_fit_.xmax - est.shape_fit_.xmin) ** 2
         xgrid = np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, grid_size + 2)[1:-1]
-        roughness = np.sqrt(np.mean([est.shape_fit_.diff(x, order=2) ** 2 for x in xgrid]))
+        roughness = np.sqrt(np.mean([(est.shape_fit_.diff(x, order=2) * adj) ** 2 for x in xgrid]))
         return roughness
 
     def visualize_one_leaf(self, node_id, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
