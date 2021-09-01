@@ -499,7 +499,8 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
         check_is_fitted(self, "tree")
 
         leaf_idx = []
-        for row in np.array(x):
+        x = np.array(x)
+        for row in x:
             node = self.tree[1]
             while not node['is_leaf']:
                 if row[node['feature']] <= node['threshold']:

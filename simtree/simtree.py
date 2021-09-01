@@ -279,7 +279,7 @@ class SIMTree(metaclass=ABCMeta):
         ax2_importance = fig.add_subplot(inner[1])  
         ax2_coef.get_shared_y_axes().join(ax2_coef, ax2_importance)
         ax2_importance.set_yticklabels([])
-        ax2_importance.barh(self.feature_names, self.get_feature_importance(node_id))
+        ax2_importance.barh(self.feature_names, self.get_feature_importance(node_id)[::-1])
         ax2_importance.set_title("Importance")
         fig.add_subplot(ax2_importance)
         plt.show()
