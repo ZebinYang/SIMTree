@@ -85,6 +85,55 @@ class SIMTree(metaclass=ABCMeta):
             self.reg_gamma = [self.reg_gamma]
         else:
             raise ValueError("Invalid reg_gamma")
+    
+    def get_projection_index(self, node_id):
+        
+        """return the projection index of one leaf node.
+
+        Parameters
+        ---------
+        node_id : int
+            the id of leaf node
+        """
+        return self.leaf_estimators_[node_id].beta_.flatten()
+
+    def get_feature_importance(self, node_id):
+        
+        """return the feature_importance of one leaf node.
+
+        Parameters
+        ---------
+        node_id : int
+            the id of leaf node
+        """
+        importance = (self.x[self.decision_path_indice(self.x, node_id)] * self.leaf_estimators_[node_id].beta_.ravel()).std(0)
+        return importance
+
+    def get_projection_equation(self, node_id, precision=3):
+        
+        """return the projection equation of one leaf node in string format.
+
+        Parameters
+        ---------
+        node_id : int
+            the id of leaf node
+        precision : int
+            the precision of coefficients
+        """
+        equation = ""
+        importance = self.get_feature_importance(node_id)
+        sortind = np.argsort(importance)[::-1]
+        for i in range(est.beta_.shape[0]):
+            if i == 0:
+                equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + clf.feature_names[sortind[i]]
+                continue
+            else:
+                if est.beta_[sortind[i], 0] > 0:
+                    equation += " + "
+                else:
+                    equation += " - "
+                equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + clf.feature_names[sortind[i]]
+        return equation
 
     def visualize_one_leaf(self, node_id, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
 
@@ -120,7 +169,7 @@ class SIMTree(metaclass=ABCMeta):
 
         fig = plt.figure(figsize=(10, 4))
         est = self.leaf_estimators_[node_id]
-        outer = gridspec.GridSpec(1, 2, wspace=0.25)
+        outer = gridspec.GridSpec(1, 2, wspace=0.25, width_ratios=[1.2, 1])
         inner = gridspec.GridSpecFromSubplotSpec(2, 1, subplot_spec=outer[0], wspace=0.1, hspace=0.1, height_ratios=[6, 1])
         ax1_main = fig.add_subplot(inner[0])
         xgrid = np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 100).reshape([-1, 1])
@@ -139,48 +188,36 @@ class SIMTree(metaclass=ABCMeta):
         ax1_density.set_xticks(np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, 5))
         fig.add_subplot(ax1_density)
 
-        ax2 = fig.add_subplot(outer[1])
+        inner = gridspec.GridSpecFromSubplotSpec(1, 2, subplot_spec=outer[1], wspace=0.2, hspace=0.1, width_ratios=[1, 1])
+        ax2_coef = fig.add_subplot(inner[0])
         if len(est.beta_) <= 50:
-            ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
-            ax2.set_yticks(np.arange(len(est.beta_)))
-            ax2.set_yticklabels([self.feature_names[idx][:8] for idx in range(len(est.beta_.ravel()))][::-1])
-            ax2.set_xlim(xlim_min, xlim_max)
-            ax2.set_ylim(-1, len(est.beta_))
-            ax2.axvline(0, linestyle="dotted", color="black")
+            ax2_coef.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
+            ax2_coef.set_yticks(np.arange(len(est.beta_)))
+            ax2_coef.set_yticklabels([self.feature_names[idx] for idx in range(len(est.beta_.ravel()))][::-1])
+            ax2_coef.set_xlim(xlim_min, xlim_max)
+            ax2_coef.set_ylim(-1, len(est.beta_))
+            ax2_coef.axvline(0, linestyle="dotted", color="black")
         else:
             right = np.round(np.linspace(0, np.round(len(est.beta_) * 0.45).astype(int), 5))
             left = len(est.beta_) - 1 - right
             input_ticks = np.unique(np.hstack([left, right])).astype(int)
 
-            ax2.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
-            ax2.set_yticks(input_ticks)
-            ax2.set_yticklabels([self.feature_names[idx][:8] for idx in input_ticks][::-1])
-            ax2.set_xlim(xlim_min, xlim_max)
-            ax2.set_ylim(-1, len(est.beta_))
-            ax2.axvline(0, linestyle="dotted", color="black")
+            ax2_coef.barh(np.arange(len(est.beta_)), [beta for beta in est.beta_.ravel()][::-1])
+            ax2_coef.set_yticks(input_ticks)
+            ax2_coef.set_yticklabels([self.feature_names[idx] for idx in input_ticks][::-1])
+            ax2_coef.set_xlim(xlim_min, xlim_max)
+            ax2_coef.set_ylim(-1, len(est.beta_))
+            ax2_coef.axvline(0, linestyle="dotted", color="black")
 
-        ax2title = ""
-        sortind = np.argsort(np.abs(est.beta_).ravel())[::-1]
-        for i in range(est.beta_.shape[0]):
-            if i == 0:
-                ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]][:8]
-                continue
-            elif (i > 0) & (i < 3):
-                if np.abs(est.beta_[sortind[i], 0]) > 0.001:
-                    if est.beta_[sortind[i], 0] > 0:
-                        ax2title += " + "
-                    else:
-                        ax2title += " - "
-                    ax2title += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]][:8]
-                else:
-                    break
-            elif i == 3:
-                if np.abs(est.beta_[sortind[3], 0]) > 0.001:
-                    ax2title += "+..."
-            else:
-                break
-        ax2.set_title(ax2title)
-        fig.add_subplot(ax2)
+        ax2_coef.set_title("Projection Index")
+        fig.add_subplot(ax2_coef)
+
+        ax2_importance = fig.add_subplot(inner[1])  
+        ax2_coef.get_shared_y_axes().join(ax2_coef, ax2_importance)
+        ax2_importance.set_yticklabels([])
+        ax2_importance.barh(self.feature_names, self.get_feature_importance(node_id))
+        ax2_importance.set_title("Importance")
+        fig.add_subplot(ax2_importance)
         plt.show()
         if save_png:
             if not os.path.exists(folder):
