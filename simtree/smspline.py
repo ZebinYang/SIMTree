@@ -73,6 +73,7 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
         if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
             derivative = np.zeros((x.shape[0], 1))
         else:
+            x = np.array(x).reshape(1)
             if order == 1:
                 derivative = (self.decision_function(x + delta / 2) - self.decision_function(x - delta / 2)) / delta
             elif order == 2:
