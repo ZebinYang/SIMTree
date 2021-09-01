@@ -28,7 +28,7 @@ class SIMTree(metaclass=ABCMeta):
 
     def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20,
-                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, random_state=0):
 
         super(SIMTree, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -43,7 +43,6 @@ class SIMTree(metaclass=ABCMeta):
         self.knot_num = knot_num
         self.reg_gamma = reg_gamma
         self.reg_lambda = reg_lambda
-        self.leaf_update = leaf_update
 
     def _validate_hyperparameters(self):
 
@@ -286,7 +285,7 @@ class SIMTreeRegressor(SIMTree, MoBTreeRegressor, RegressorMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20,
-                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, random_state=0):
 
         super(SIMTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -300,7 +299,6 @@ class SIMTreeRegressor(SIMTree, MoBTreeRegressor, RegressorMixin):
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
-                                 leaf_update=leaf_update,
                                  random_state=random_state)
 
         self.base_estimator = SimRegressor(reg_lambda=0, reg_gamma=1e-5, degree=self.degree,
@@ -321,11 +319,6 @@ class SIMTreeRegressor(SIMTree, MoBTreeRegressor, RegressorMixin):
                       cv=5, refit="mse", n_jobs=1, error_score=np.nan)
         grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
         best_estimator = grid.best_estimator_
-        if self.leaf_update:
-            best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice].ravel(),
-                                      max_middle_iter=1000, n_middle_iter_no_change=10,
-                                      max_inner_iter=1000, n_inner_iter_no_change=10,
-                                      batch_size=min(int(0.2 * len(sample_indice)), 100))
         predict_func = lambda x: best_estimator.predict(x)
         best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict(self.x[sample_indice]))
         return predict_func, best_estimator, best_impurity
@@ -335,7 +328,7 @@ class SIMTreeClassifier(SIMTree, MoBTreeClassifier, ClassifierMixin):
 
     def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
                  split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20,
-                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, leaf_update=False, random_state=0):
+                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, random_state=0):
 
         super(SIMTreeClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -349,7 +342,6 @@ class SIMTreeClassifier(SIMTree, MoBTreeClassifier, ClassifierMixin):
                                  knot_num=knot_num,
                                  reg_lambda=reg_lambda,
                                  reg_gamma=reg_gamma,
-                                 leaf_update=leaf_update,
                                  random_state=random_state)
 
         self.base_estimator = SimClassifier(reg_lambda=0, reg_gamma=1e-5, degree=self.degree,
@@ -375,11 +367,6 @@ class SIMTreeClassifier(SIMTree, MoBTreeClassifier, ClassifierMixin):
                           cv=5, refit="auc", n_jobs=1, error_score=np.nan)
             grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
             best_estimator = grid.best_estimator_
-            if self.leaf_update:
-                best_estimator.fit_middle_update_adam(self.x[sample_indice], self.y[sample_indice].ravel(),
-                                          max_middle_iter=100, n_middle_iter_no_change=5,
-                                          max_inner_iter=100, n_inner_iter_no_change=5,
-                                          batch_size=min(int(0.2 * len(sample_indice)), 100))
             predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
             best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity

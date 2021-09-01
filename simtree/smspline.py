@@ -54,7 +54,7 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
 
         self.density_, self.bins_ = np.histogram(x, bins=10, density=True)
 
-    def diff(self, x, order=1):
+    def diff(self, x, order=1, delta=1e-5):
 
         """method to calculate derivatives of the fitted adaptive spline to the input
 
@@ -63,25 +63,23 @@ class BaseSMSpline(BaseEstimator, metaclass=ABCMeta):
         x : array-like of shape (n_samples, 1)
             containing the input dataset
         order : int
-            order of derivative
+            order of derivative, not larger than 2
+        delta : float
+            the small value used for calculating finite difference
         """
+        
         if order > self.degree:
             raise Exception("order should not be greater than degree")
         if isinstance(self.sm_, (np.ndarray, np.int, int, np.floating, float)):
             derivative = np.zeros((x.shape[0], 1))
-        elif "modelspec" in self.sm_.names:
-            modelspec = self.sm_[int(np.where(self.sm_.names == "modelspec")[0][0])]
-            knots = np.array(modelspec[0])
-            coefs = np.array(modelspec[11]).reshape(-1, 1)
-            basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, m=1 if self.degree==1 else 2, d=order,
-                               xmin=self.xmin, xmax=self.xmax, periodic=False, intercept=True)
-            derivative = np.dot(basis[0], coefs).ravel()
         else:
-            knots = np.array(self.sm_[12])
-            coefs = np.array(self.sm_[15]).reshape(-1, 1)
-            basis = bigsplines.ssBasis((x - self.xmin) / (self.xmax - self.xmin), knots, m=1 if self.degree==1 else 2, d=order,
-                               xmin=0, xmax=1, periodic=False, intercept=True)
-            derivative = np.dot(basis[0], coefs).ravel()
+            if order == 1:
+                derivative = (self.decision_function(x + delta / 2) - self.decision_function(x - delta / 2)) / delta
+            elif order == 2:
+                derivative = (self.decision_function(x + delta) + self.decision_function(x - delta) 
+                          - 2 * self.decision_function(x)) / delta ** 2
+            else:
+                raise Exception("higher order derivatives is not supported now.")
         return derivative
 
     def visualize(self):
