@@ -123,6 +123,7 @@ class SIMTree(metaclass=ABCMeta):
         equation = ""
         importance = self.get_feature_importance(node_id)
         sortind = np.argsort(importance)[::-1]
+        est = self.leaf_estimators_[node_id].
         for i in range(est.beta_.shape[0]):
             if i == 0:
                 equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + clf.feature_names[sortind[i]]
