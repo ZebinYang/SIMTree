@@ -157,7 +157,7 @@ class SIMTree(metaclass=ABCMeta):
         for i in range(est.beta_.shape[0]):
             if i == 0:
                 if est.beta_[sortind[i], 0] < 0:
-                    equation += " - "
+                    equation += "- "
                 equation += str(round(np.abs(est.beta_[sortind[i], 0]), precision)) + self.feature_names[sortind[i]]
                 continue
             else:
