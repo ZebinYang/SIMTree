@@ -215,7 +215,7 @@ class SIMTree(metaclass=ABCMeta):
         est = self.leaf_estimators_[node_id]
         adj = (est.shape_fit_.xmax - est.shape_fit_.xmin) ** 2
         xgrid = np.linspace(est.shape_fit_.xmin, est.shape_fit_.xmax, grid_size + 2)[1:-1]
-        roughness = np.sqrt(np.mean([(est.shape_fit_.diff(x, order=2) * adj) ** 2 for x in xgrid]))
+        roughness = adj * np.sqrt(np.mean([(est.shape_fit_.diff(x, order=2)) ** 2 for x in xgrid]))
         return roughness
 
     def visualize_one_leaf(self, node_id, folder="./results/", name="leaf_sim", save_png=False, save_eps=False):
