@@ -159,11 +159,12 @@ class SIMTree(metaclass=ABCMeta):
                 equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
                 continue
             else:
-                if est.beta_[sortind[i], 0] > 0:
-                    equation += " + "
-                else:
-                    equation += " - "
-                equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
+                if np.abs(est.beta_[sortind[i], 0]) > 0:
+                    if est.beta_[sortind[i], 0] > 0:
+                        equation += " + "
+                    else:
+                        equation += " - "
+                    equation += str(round(np.abs(est.beta_[sortind[i], 0]), 3)) + self.feature_names[sortind[i]]
         return equation
     
     def get_sparsity(self, node_id):
