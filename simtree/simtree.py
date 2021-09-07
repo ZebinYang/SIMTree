@@ -126,7 +126,7 @@ class SIMTree(metaclass=ABCMeta):
             print("This is a constant node, and SIM is not available.")
             return
 
-        importance = (self.x[self.decision_path_indice(self.x, node_id)] * self.leaf_estimators_[node_id].beta_.ravel()).std(0)
+        importance = (self.x[self.decision_path_indice(self.x, node_id)] * self.leaf_estimators_[node_id].beta_.ravel()).std(0, ddof=1)
         return importance
 
     def get_projection_equation(self, node_id, precision=3):
