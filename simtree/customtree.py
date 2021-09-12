@@ -16,8 +16,8 @@ __all__ = ["CustomMobTreeRegressor", "CustomMobTreeClassifier"]
 
 class CustomMobTreeRegressor(MoBTreeRegressor, RegressorMixin):
 
-    def __init__(self, base_estimator, param_dict={}, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, random_state=0, **kargs):
+    def __init__(self, base_estimator, param_dict={}, max_depth=3, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=1, n_feature_search=10, n_split_grid=20, random_state=0, **kargs):
 
         super(CustomMobTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -54,8 +54,8 @@ class CustomMobTreeRegressor(MoBTreeRegressor, RegressorMixin):
 
 class CustomMobTreeClassifier(MoBTreeClassifier, RegressorMixin):
 
-    def __init__(self, base_estimator, param_dict={}, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=5, n_split_grid=20, random_state=0, **kargs):
+    def __init__(self, base_estimator, param_dict={}, max_depth=3, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=1, n_feature_search=10, n_split_grid=20, random_state=0, **kargs):
 
         super(CustomMobTreeClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,

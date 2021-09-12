@@ -26,9 +26,9 @@ class SIMTree(metaclass=ABCMeta):
         Base SIMTree class for classification and regression.
      """
 
-    def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20,
-                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, random_state=0):
+    def __init__(self, max_depth=3, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=1, n_feature_search=10, n_split_grid=20,
+                 degree=3, knot_num=20, reg_lambda=0, reg_gamma=1e-5, random_state=0):
 
         super(SIMTree, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -405,9 +405,9 @@ class SIMTree(metaclass=ABCMeta):
 
 class SIMTreeRegressor(SIMTree, MoBTreeRegressor, RegressorMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20,
-                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, random_state=0):
+    def __init__(self, max_depth=3, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=1, n_feature_search=10, n_split_grid=20,
+                 degree=3, knot_num=20, reg_lambda=0, reg_gamma=1e-5, random_state=0):
 
         super(SIMTreeRegressor, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,
@@ -448,9 +448,9 @@ class SIMTreeRegressor(SIMTree, MoBTreeRegressor, RegressorMixin):
 
 class SIMTreeClassifier(SIMTree, MoBTreeClassifier, ClassifierMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
-                 split_features=None, n_screen_grid=5, n_feature_search=10, n_split_grid=20,
-                 degree=3, knot_num=30, reg_lambda=0, reg_gamma=1e-5, random_state=0):
+    def __init__(self, max_depth=3, min_samples_leaf=50, min_impurity_decrease=0, feature_names=None,
+                 split_features=None, n_screen_grid=1, n_feature_search=10, n_split_grid=20,
+                 degree=3, knot_num=20, reg_lambda=0, reg_gamma=1e-5, random_state=0):
 
         super(SIMTreeClassifier, self).__init__(max_depth=max_depth,
                                  min_samples_leaf=min_samples_leaf,

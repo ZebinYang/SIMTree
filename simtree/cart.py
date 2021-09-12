@@ -8,7 +8,7 @@ __all__ = ["CARTRegressor", "CARTClassifier"]
 
 class CARTRegressor(MoBTreeRegressor, RegressorMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
+    def __init__(self, max_depth=3, min_samples_leaf=50, min_impurity_decrease=0,
                  split_features=None, feature_names=None, random_state=0):
 
         super(CARTRegressor, self).__init__(max_depth=max_depth,
@@ -94,7 +94,7 @@ class CARTRegressor(MoBTreeRegressor, RegressorMixin):
 
 class CARTClassifier(MoBTreeClassifier, ClassifierMixin):
 
-    def __init__(self, max_depth=2, min_samples_leaf=10, min_impurity_decrease=0,
+    def __init__(self, max_depth=3, min_samples_leaf=50, min_impurity_decrease=0,
                  split_features=None, feature_names=None, random_state=0):
 
         super(CARTClassifier, self).__init__(max_depth=max_depth,
