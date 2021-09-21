@@ -99,14 +99,29 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
             if feature_range < self.EPSILON:
                 continue
 
-            best_impurity = np.inf
-            split_points = np.quantile(sortted_feature, np.linspace(0, 1, self.n_screen_grid + 2)[1:-1], interpolation='lower')
-            for split_point in split_points:
-                
-                i = abs(sortted_feature - split_point).argmin()
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+            split_point = 0
+            for i, _ in enumerate(sortted_indice):
+
+                if i == (n_samples - 1):
                     continue
 
+                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                    continue
+                
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
+                    continue
+
+                percentage = (split_point + 1) / (self.n_screen_grid + 1)
+                if n_samples > self.min_samples_leaf * (self.n_screen_grid + 1):
+                    if (i + 1) / n_samples < percentage:
+                        continue
+                elif n_samples > 2 * self.min_samples_leaf:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < percentage:
+                        continue
+                elif (i + 1) != self.min_samples_leaf:
+                    continue
+
+                split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
                 if node_y[left_indice].std() == 0:
                     left_impurity = 0
@@ -152,14 +167,29 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
             if feature_range < self.EPSILON:
                 continue
 
-            best_impurity = np.inf
-            split_points = np.quantile(sortted_feature, np.linspace(0, 1, self.n_split_grid + 2)[1:-1], interpolation='lower')
-            for split_point in split_points:
+            split_point = 0
+            for i, _ in enumerate(sortted_indice):
 
-                i = abs(sortted_feature - split_point).argmin()
-                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                if i == (n_samples - 1):
                     continue
 
+                if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
+                    continue
+                
+                if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
+                    continue
+
+                percentage = (split_point + 1) / (self.n_screen_grid + 1)
+                if n_samples > self.min_samples_leaf * (self.n_split_grid + 1):
+                    if (i + 1) / n_samples < percentage:
+                        continue
+                elif n_samples > 2 * self.min_samples_leaf:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < percentage:
+                        continue
+                elif (i + 1) != self.min_samples_leaf:
+                    continue
+
+                split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
                 if node_y[left_indice].std() == 0:
                     left_impurity = 0
