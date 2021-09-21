@@ -117,8 +117,6 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 elif n_samples > 2 * self.min_samples_leaf:
                     if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_screen_grid - 1):
                         continue
-                elif (i + 1) != self.min_samples_leaf:
-                    continue
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
@@ -184,8 +182,6 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 elif n_samples > 2 * self.min_samples_leaf:
                     if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
                         continue
-                elif (i + 1) != self.min_samples_leaf:
-                    continue
 
                 split_point += 1
                 left_indice = sortted_indice[:(i + 1)]
