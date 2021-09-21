@@ -112,14 +112,14 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     left_impurity = 0
                 else:
                     self.base_estimator.fit(node_x[left_indice], node_y[left_indice])
-                    left_impurity = self.evaluate_estimator(self.base_estimator, node_x[left_indice], node_y[left_indice].ravel())
+                    left_impurity = self.evaluate_estimator(self.base_estimator, node_x[left_indice], node_y[left_indice])
 
                 right_indice = sortted_indice[(i + 1):]
                 if node_y[right_indice].std() == 0:
                     right_impurity = 0
                 else:
                     self.base_estimator.fit(node_x[right_indice], node_y[right_indice])
-                    right_impurity = self.evaluate_estimator(self.base_estimator, node_x[right_indice], node_y[right_indice].ravel())
+                    right_impurity = self.evaluate_estimator(self.base_estimator, node_x[right_indice], node_y[right_indice])
 
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
                 if current_impurity < (best_impurity - self.EPSILON):
@@ -165,14 +165,14 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                     left_impurity = 0
                 else:
                     self.base_estimator.fit(node_x[left_indice], node_y[left_indice])
-                    left_impurity = self.evaluate_estimator(self.base_estimator, node_x[left_indice], node_y[left_indice].ravel())
+                    left_impurity = self.evaluate_estimator(self.base_estimator, node_x[left_indice], node_y[left_indice])
 
                 right_indice = sortted_indice[(i + 1):]
                 if node_y[right_indice].std() == 0:
                     right_impurity = 0
                 else:
                     self.base_estimator.fit(node_x[right_indice], node_y[right_indice])
-                    right_impurity = self.evaluate_estimator(self.base_estimator, node_x[right_indice], node_y[right_indice].ravel())
+                    right_impurity = self.evaluate_estimator(self.base_estimator, node_x[right_indice], node_y[right_indice])
 
                 current_impurity = (len(left_indice) * left_impurity + len(right_indice) * right_impurity) / n_samples
                 if current_impurity < (best_impurity - self.EPSILON):
@@ -523,7 +523,7 @@ class MoBTreeRegressor(MoBTree, RegressorMixin):
         float
             the MSE loss
         """
-        loss = np.average((label - pred) ** 2, axis=0)
+        loss = np.average((label.ravel() - pred.ravel()) ** 2, axis=0)
         return loss
 
     def evaluate_estimator(self, estimator, x, y):
@@ -598,7 +598,7 @@ class MoBTreeClassifier(MoBTree, ClassifierMixin):
 
         with np.errstate(divide="ignore", over="ignore"):
             pred = np.clip(pred, self.EPSILON, 1. - self.EPSILON)
-            loss = - np.average(label * np.log(pred) + (1 - label) * np.log(1 - pred), axis=0)
+            loss = - np.average(label.ravel() * np.log(pred.ravel()) + (1 - label.ravel()) * np.log(1 - pred.ravel()), axis=0)
         return loss
 
     def evaluate_estimator(self, estimator, x, y):
