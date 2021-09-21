@@ -111,12 +111,11 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                percentage = (split_point + 1) / (self.n_screen_grid + 1)
-                if n_samples > self.min_samples_leaf * (self.n_screen_grid + 1):
-                    if (i + 1) / n_samples < percentage:
+                if n_samples > (self.n_screen_grid + 1) * self.min_samples_leaf:
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
                         continue
                 elif n_samples > 2 * self.min_samples_leaf:
-                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < percentage:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_screen_grid - 1):
                         continue
                 elif (i + 1) != self.min_samples_leaf:
                     continue
@@ -179,12 +178,11 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 if sortted_feature[i + 1] <= sortted_feature[i] + self.EPSILON:
                     continue
 
-                percentage = (split_point + 1) / (self.n_screen_grid + 1)
-                if n_samples > self.min_samples_leaf * (self.n_split_grid + 1):
-                    if (i + 1) / n_samples < percentage:
+                if n_samples > (self.n_split_grid + 1) * self.min_samples_leaf:
+                    if (i + 1) / n_samples < (split_point + 1) / (self.n_split_grid + 1):
                         continue
                 elif n_samples > 2 * self.min_samples_leaf:
-                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < percentage:
+                    if (i + 1 - self.min_samples_leaf) / (n_samples - 2 * self.min_samples_leaf) < split_point / (self.n_split_grid - 1):
                         continue
                 elif (i + 1) != self.min_samples_leaf:
                     continue
