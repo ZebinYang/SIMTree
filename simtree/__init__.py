@@ -8,5 +8,5 @@ __all__ = ["CARTRegressor", "CARTClassifier",
         "SIMTreeRegressor", "SIMTreeClassifier",
         "CustomMobTreeRegressor", "CustomMobTreeClassifier"]
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 __author__ = 'Zebin Yang'
