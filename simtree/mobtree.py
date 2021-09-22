@@ -100,6 +100,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                 continue
 
             split_point = 0
+            best_impurity = np.inf
             for i, _ in enumerate(sortted_indice):
 
                 if i == (n_samples - 1):
