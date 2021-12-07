@@ -4,6 +4,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from abc import ABCMeta, abstractmethod
 
+from sklearn.utils.extmath import softmax
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.utils import check_X_y, column_or_1d
 from sklearn.utils.validation import check_is_fitted
@@ -475,41 +476,53 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
 
     def decision_path(self, x):
 
+        check_is_fitted(self, "tree")
+
         n_samples = x.shape[0]
         path_all = np.zeros((n_samples, self.node_count))
-        for idx, row in enumerate(x):
+        for node_id in self.leaf_idx_list:
             path = []
-            node = self.tree[1]
-            while not node['is_leaf']:
-                path.append(node["node_id"] - 1)
-                if row[node['feature']] <= node['threshold']:
-                    node = self.tree[node['left_child_id']]
+            idx = node_id
+            sample_indice = np.ones((x.shape[0], )).astype(np.bool)
+            while True:
+                path.append(idx - 1)
+                current_node = self.tree[idx]
+                if current_node["parent_id"] is None:
+                    break
                 else:
-                    node = self.tree[node['right_child_id']]
-            path.append(node["node_id"] - 1)
-            path_all[idx][path] = 1
+                    parent_node = self.tree[current_node["parent_id"]]
+                    if current_node["is_left"]:
+                        sample_indice = np.logical_and(sample_indice, x[:, parent_node["feature"]] <= parent_node["threshold"])
+                    else:
+                        sample_indice = np.logical_and(sample_indice, x[:, parent_node["feature"]] > parent_node["threshold"])
+                idx = current_node["parent_id"]
+            if sample_indice.sum() > 0:
+                path_all[np.ix_(np.where(sample_indice)[0], path)] = 1
         return path_all
 
     def decision_function(self, x):
 
         check_is_fitted(self, "tree")
 
-        leaf_idx = []
         x = np.array(x)
-        for row in x:
-            node = self.tree[1]
-            while not node['is_leaf']:
-                if row[node['feature']] <= node['threshold']:
-                    node = self.tree[node['left_child_id']]
-                else:
-                    node = self.tree[node['right_child_id']]
-            leaf_idx.append(node['node_id'])
-
         n_samples = x.shape[0]
         pred = np.zeros((n_samples))
-        for node_id in np.unique(leaf_idx):
-            sample_indice = np.array(leaf_idx) == node_id
-            pred[sample_indice] = self.tree[node_id]['predict_func'](x[sample_indice, :]).ravel()
+        for node_id in self.leaf_idx_list:
+            idx = node_id
+            sample_indice = np.ones((x.shape[0], )).astype(np.bool)
+            while True:
+                current_node = self.tree[idx]
+                if current_node["parent_id"] is None:
+                    break
+                else:
+                    parent_node = self.tree[current_node["parent_id"]]
+                    if current_node["is_left"]:
+                        sample_indice = np.logical_and(sample_indice, x[:, parent_node["feature"]] <= parent_node["threshold"])
+                    else:
+                        sample_indice = np.logical_and(sample_indice, x[:, parent_node["feature"]] > parent_node["threshold"])
+                idx = current_node["parent_id"]
+            if sample_indice.sum() > 0:
+                pred[sample_indice] = self.tree[node_id]['predict_func'](x[sample_indice, :]).ravel()
         return pred
 
 
@@ -647,9 +660,10 @@ class MoBTreeClassifier(MoBTree, ClassifierMixin):
         return loss
 
     def predict_proba(self, x):
-        proba = self.decision_function(x).reshape(-1, 1)
-        return np.hstack([1 - proba, proba])
+        pred = self.decision_function(x).reshape(-1, 1)
+        pred_proba = softmax(np.hstack([-pred, pred]) / 2, copy=False)
+        return pred_proba
 
     def predict(self, x):
-        pred_proba = self.decision_function(x)
+        pred_proba = self.predict_proba(x)
         return self._label_binarizer.inverse_transform(pred_proba)

@@ -489,6 +489,6 @@ class SIMTreeClassifier(SIMTree, MoBTreeClassifier, ClassifierMixin):
                           cv=5, refit="auc", n_jobs=1, error_score=np.nan)
             grid.fit(self.x[sample_indice], self.y[sample_indice].ravel())
             best_estimator = grid.best_estimator_
-            predict_func = lambda x: best_estimator.predict_proba(x)[:, 1]
+            predict_func = lambda x: best_estimator.decision_function(x)
             best_impurity = self.get_loss(self.y[sample_indice], best_estimator.predict_proba(self.x[sample_indice])[:, 1])
         return predict_func, best_estimator, best_impurity
