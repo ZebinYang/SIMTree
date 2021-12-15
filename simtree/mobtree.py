@@ -307,6 +307,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
                                  "depth": depth + 1,
                                  "impurity": split["right_impurity"],
                                  "is_left": False})
+        self.leaf_idx_list = [key for key, item in self.tree.items() if item["is_leaf"]]
         return self
 
     def plot_tree(self, draw_depth=np.inf, start_node_id=1, folder="./results/", name="demo", save_png=False, save_eps=False):
