@@ -133,12 +133,12 @@ class CARTClassifier(MoBTreeClassifier, ClassifierMixin):
             sum_total = np.sum(node_y)
             for i, _ in enumerate(sortted_indice):
 
+                sum_left += node_y[sortted_indice[i]]
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
 
                 n_left = i + 1
                 n_right = n_samples - i - 1
-                sum_left += node_y[sortted_indice[i]]
 
                 left_impurity = 0
                 right_impurity = 0
