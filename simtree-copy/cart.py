@@ -8,7 +8,7 @@ __all__ = ["CARTRegressor", "CARTClassifier"]
 
 class CARTRegressor(MoBTreeRegressor, RegressorMixin):
 
-    def __init__(self, max_depth=3, min_samples_leaf=1, min_impurity_decrease=0,
+    def __init__(self, max_depth=3, min_samples_leaf=50, min_impurity_decrease=0,
                  split_features=None, feature_names=None, random_state=0):
 
         super(CARTRegressor, self).__init__(max_depth=max_depth,
@@ -55,13 +55,12 @@ class CARTRegressor(MoBTreeRegressor, RegressorMixin):
             sq_sum_total = np.sum(node_y ** 2)
             for i, _ in enumerate(sortted_indice):
 
-                sum_left += node_y[sortted_indice[i]]
-
                 if ((i + 1) < self.min_samples_leaf) or ((n_samples - i - 1) < self.min_samples_leaf):
                     continue
 
                 n_left = i + 1
                 n_right = n_samples - i - 1
+                sum_left += node_y[sortted_indice[i]]
                 current_impurity = (sq_sum_total / n_samples - (sum_left / n_left) ** 2 * n_left / n_samples -
                              ((sum_total - sum_left) / n_right) ** 2 * n_right / n_samples)
 
@@ -83,7 +82,7 @@ class CARTRegressor(MoBTreeRegressor, RegressorMixin):
 
 class CARTClassifier(MoBTreeClassifier, ClassifierMixin):
 
-    def __init__(self, max_depth=3, min_samples_leaf=1, min_impurity_decrease=0,
+    def __init__(self, max_depth=3, min_samples_leaf=50, min_impurity_decrease=0,
                  split_features=None, feature_names=None, random_state=0):
 
         super(CARTClassifier, self).__init__(max_depth=max_depth,
