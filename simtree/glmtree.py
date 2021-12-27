@@ -42,8 +42,16 @@ class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
         sx = self.x[sample_indice].std(0) + self.EPSILON
         nx = (self.x[sample_indice] - mx) / sx
 
-        best_estimator = LassoCV(alphas=self.reg_lambda, cv=5, n_jobs=1, random_state=self.random_state)
-        best_estimator.fit(nx, self.y[sample_indice])
+        if len(self.reg_lambda) > 1:
+            best_estimator = LassoCV(alphas=self.reg_lambda, cv=5, n_jobs=self.n_jobs, precompute=False, random_state=self.random_state)
+            best_estimator.fit(nx, self.y[sample_indice], self.sample_weight[sample_indice])
+        else:
+            if self.reg_lambda[0] > 0:
+                best_estimator = Lasso(alpha=self.reg_lambda[0], precompute=False, random_state=self.random_state)
+            else:
+                best_estimator = LinearRegression()
+            best_estimator.fit(nx, self.y[sample_indice])
+
         best_estimator.coef_ = best_estimator.coef_ / sx
         best_estimator.intercept_ = best_estimator.intercept_ - np.dot(mx, best_estimator.coef_.T)
         xmin = np.min(np.dot(self.x[sample_indice], best_estimator.coef_) + best_estimator.intercept_)
@@ -83,8 +91,12 @@ class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
             predict_func = lambda x: np.ones(x.shape[0]) * self.y[sample_indice].mean()
             best_impurity = self.get_loss(self.y[sample_indice], predict_func(self.x[sample_indice]))
         else:
-            best_estimator = LogisticRegressionCV(Cs=self.reg_lambda, penalty="l1", solver="liblinear", scoring="roc_auc",
-                                      cv=5, n_jobs=1, random_state=self.random_state)
+            if len(self.reg_lambda) > 1:
+                best_estimator = LogisticRegressionCV(Cs=self.reg_lambda, penalty="l1", solver="liblinear", scoring="roc_auc",
+                                      cv=5, n_jobs=self.n_jobs, random_state=self.random_state)
+            else:
+                best_estimator = LogisticRegression(alpha=self.reg_lambda[0], precompute=False, random_state=self.random_state)
+
             mx = self.x[sample_indice].mean(0)
             sx = self.x[sample_indice].std(0) + self.EPSILON
             nx = (self.x[sample_indice] - mx) / sx
