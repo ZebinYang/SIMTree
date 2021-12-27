@@ -485,7 +485,7 @@ class SIMTreeClassifier(SIMTree, MoBTreeClassifier, ClassifierMixin):
 
         param_size = len(self.reg_lambda)
         if param_size == 1:
-            best_estimator = SimRegressor(reg_lambda=[self.reg_lambda[0]], reg_gamma=self.reg_gamma, degree=self.degree,
+            best_estimator = SimClassifier(reg_lambda=[self.reg_lambda[0]], reg_gamma=self.reg_gamma, degree=self.degree,
                           knot_num=self.knot_num, random_state=self.random_state)
             best_estimator.fit(self.x[sample_indice], self.y[sample_indice].ravel())
             predict_func = lambda x: best_estimator.decision_function(x)

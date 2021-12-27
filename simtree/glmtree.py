@@ -95,7 +95,7 @@ class GLMTreeClassifier(MoBTreeClassifier, ClassifierMixin):
                 best_estimator = LogisticRegressionCV(Cs=self.reg_lambda, penalty="l1", solver="liblinear", scoring="roc_auc",
                                       cv=5, random_state=self.random_state)
             else:
-                best_estimator = LogisticRegression(alpha=self.reg_lambda[0], precompute=False, random_state=self.random_state)
+                best_estimator = LogisticRegression(C=self.reg_lambda[0], random_state=self.random_state)
 
             mx = self.x[sample_indice].mean(0)
             sx = self.x[sample_indice].std(0) + self.EPSILON
