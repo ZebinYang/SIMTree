@@ -627,8 +627,6 @@ class MoBTreeClassifier(MoBTree, ClassifierMixin):
             containing the input dataset
         pred : array-like of shape (n_samples,)
             containing the output dataset
-        sample_weight : array-like of shape (n_samples,), optional
-            containing sample weights
         Returns
         -------
         float

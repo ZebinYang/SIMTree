@@ -44,7 +44,7 @@ class GLMTreeRegressor(MoBTreeRegressor, RegressorMixin):
 
         if len(self.reg_lambda) > 1:
             best_estimator = LassoCV(alphas=self.reg_lambda, cv=5, precompute=False, random_state=self.random_state)
-            best_estimator.fit(nx, self.y[sample_indice], self.sample_weight[sample_indice])
+            best_estimator.fit(nx, self.y[sample_indice])
         else:
             if self.reg_lambda[0] > 0:
                 best_estimator = Lasso(alpha=self.reg_lambda[0], precompute=False, random_state=self.random_state)
