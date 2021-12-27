@@ -256,7 +256,7 @@ class MoBTree(BaseEstimator, metaclass=ABCMeta):
         if self.split_features is None:
             self.split_features = np.arange(n_features).tolist()
 
-        if self.n_feature_search > len(self.split_features) and (self.max_depth >= 1):
+        if self.n_feature_search > len(self.split_features) and (self.max_depth >= 0):
             self.important_split_features = self.split_features
         else:
             self.important_split_features = self.screen_features(sample_indice)
