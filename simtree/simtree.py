@@ -440,6 +440,8 @@ class SIMTreeRegressor(SIMTree, MoBTreeRegressor, RegressorMixin):
                           knot_num=self.knot_num, random_state=self.random_state)
             best_estimator.fit(self.x[sample_indice], self.y[sample_indice].ravel())
         else:
+            base = SimRegressor(reg_gamma=self.reg_gamma, degree=self.degree,
+                          knot_num=self.knot_num, random_state=self.random_state)
             grid = GridSearchCV(base, param_grid={"reg_lambda": self.reg_lambda},
                           scoring={"mse": make_scorer(mean_squared_error, greater_is_better=False)},
                           cv=5, refit="mse", n_jobs=1, error_score=np.nan)
