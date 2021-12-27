@@ -1,6 +1,6 @@
 package:
   name: simtree
-  version: "0.1"
+  version: "0.2.3"
 
 source:
    - path: ../
@@ -22,7 +22,6 @@ requirements:
     - pandas>=0.19.2
     - scikit-learn>=0.23.0
     - r-base
-    - r-quadprog==1.5_5
     - r-bigsplines==1.1_1
     - rpy2>=3.3.6
 
