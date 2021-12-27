@@ -43,16 +43,16 @@ class CustomMobTreeRegressor(MoBTreeRegressor, RegressorMixin):
     def build_leaf(self, sample_indice):
 
         if len(self.param_dict) == 0:
-            self.base_estimator.fit(self.x[sample_indice], self.y[sample_indice].ravel())
-            best_estimator = self.base_estimator
+            best_estimator = clone(self.base_estimator)
+            best_estimator.fit(self.x[sample_indice], self.y[sample_indice].ravel())
         else:
             param_size = 1
             for key, item in self.param_dict.items():
                 param_size *= len(item)
             if param_size == 1:
-                self.base_estimator.set_params(**{key: item[0] for key, item in self.param_dict.items()})
-                self.base_estimator.fit(self.x[sample_indice], self.y[sample_indice].ravel())
-                best_estimator = self.base_estimator
+                best_estimator = clone(self.base_estimator)
+                best_estimator.set_params(**{key: item[0] for key, item in self.param_dict.items()})
+                best_estimator.fit(self.x[sample_indice], self.y[sample_indice].ravel())
             else:
                 grid = GridSearchCV(self.base_estimator, param_grid=self.param_dict,
                               scoring={"mse": make_scorer(mean_squared_error, greater_is_better=False)},
